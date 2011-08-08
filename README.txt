@@ -4,7 +4,7 @@ lidless is a program for monitoring a ZoneMinder camera feed and interfacing it 
 
 # Dependencies
 
-* zmstream
+* zmstream (https://github.com/eastein/zmstream)
 * OpenCV with python support, 2.1 or greater
 * CPython 2.6 or greater (other pythons may work as well)
 * python-irclib
