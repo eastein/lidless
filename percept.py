@@ -85,7 +85,7 @@ class Percept :
 		# auto scaling
 		#scaling = 255 / float(max(bindict.values()))
 
-		print "wb %d hb %d sc %0.3f" % (width, height, scaling)
+		#print "wb %d hb %d sc %0.3f" % (width, height, scaling)
 
 		for x,y in bindict :
 			try :
@@ -153,6 +153,15 @@ class Percept :
 
 		return history
 
+	def ratio_lte_thr(self, img, thr) :
+		width, height = self.get_wh(img)
+		c = 0
+		for x in range(width) :
+			for y in range(height) :
+				if img[x,y] <= thr :
+					c += 1
+		return c / float(width * height)
+
 if __name__ == '__main__' :
 	p = Percept()
 	url = sys.argv[1]
@@ -176,9 +185,8 @@ if __name__ == '__main__' :
 			#cv.SaveImage('motion.png', blob_motion)
 
 			history = p.frames_ago(blob_motion, history)
+			FPS = 2
+			BUSY_SEC = 120
+			BUSY_THR = FPS * BUSY_SEC
+			print 'ratio busy within %d sec: %0.3f' % (BUSY_SEC, p.ratio_lte_thr(history, BUSY_THR))
 			cv.SaveImage('cumulative.png', history)
-
-		for k in diff :
-			diff[k] = '=' * (diff[k] / 5)
-
-		#pprint.pprint(diff)
