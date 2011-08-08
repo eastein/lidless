@@ -36,10 +36,10 @@ class Percept :
 			result[k] = abs(d1[k] - d2[k])
 		return result
 	
-	def bin_edgecount(self, img, bins=24) :
+	def bin_edgecount(self, img, bins=4096) :
 		sz = cv.GetSize(img)
-		twi = sz[0]
-		thi = sz[1]
+		twi = sz[1]
+		thi = sz[0]
 		tw = float(twi)
 		th = float(thi)
 		ta = tw * th
@@ -61,11 +61,68 @@ class Percept :
 				# integer division for the counts, find bin numbers for current pixel
 				b_w = wo / w
 				b_h = ho / h
-				v = img[ho, wo]
+				v = img[wo, ho]
 				if v > 0 :
 					whitecounts[b_w, b_h] += 1
 
 		return whitecounts
+
+	def get_size_for_bin_images(self, bindict) :
+		width = max([x for x,y in bindict.keys()]) + 1
+		bins = len(bindict)
+		height = bins / width
+		return width, height
+
+	def bins_to_img(self, bindict) :
+		if not bindict :
+			return None
+		
+		width, height = self.get_size_for_bin_images(bindict)
+
+		img = cv.CreateMat(width, height, cv.CV_8U)
+		# hardcode scaling
+		scaling = 10
+		# auto scaling
+		#scaling = 255 / float(max(bindict.values()))
+
+		print "wb %d hb %d sc %0.3f" % (width, height, scaling)
+
+		for x,y in bindict :
+			try :
+				# scaled from maximum
+				img[x,y] = min(255, int(scaling * float(bindict[x,y])))
+				# clipped, shown direct difference
+				#img[x,y] = min(255, bindict[x,y])
+			except ZeroDivisionError :
+				img[x,y] = 0
+		return img
+
+	def filter_for_blobs(self, img) :
+		height, width = cv.GetSize(img)
+		img_out = cv.CreateMat(width, height, cv.CV_8U)
+
+		THRESHOLD = 80
+		RATIO = .3
+		KS = 5
+
+		border = (KS - 1) / 2
+
+		for x in range(0, width) :
+			for y in range(0, height) :
+				if x < border or x >= width - border or y < border or y >= height - border :
+					img_out[x,y] = 0
+				else :
+					c = 0
+					for xc in range(-border, border+1) :
+						for yc in range(-border, border+1) :
+							if img[xc+x, yc+y] >= THRESHOLD :
+								c += 1
+					if c >= RATIO * KS * KS :
+						img_out[x,y] = 255
+					else :
+						img_out[x,y] = 0
+
+		return img_out
 
 if __name__ == '__main__' :
 	p = Percept()
@@ -74,15 +131,20 @@ if __name__ == '__main__' :
 	edge_bin = {}
 	for i in streamer.generate() :
 		img = p.image_jpegstr(i)
-		filtered = p.filter_edges(img)
 
+		filtered = p.filter_edges(img)
 		cv.SaveImage('edges.png', filtered)
 
 		new_bin = p.bin_edgecount(filtered)
+
 		diff = p.dict_diff(new_bin, edge_bin)
 		edge_bin = new_bin
+
+		motion_image = p.bins_to_img(diff)
+		if motion_image :
+			cv.SaveImage('motion.png', p.filter_for_blobs(motion_image))
 
 		for k in diff :
 			diff[k] = '=' * (diff[k] / 5)
 
-		pprint.pprint(diff)
+		#pprint.pprint(diff)
