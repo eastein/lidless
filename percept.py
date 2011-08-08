@@ -149,7 +149,7 @@ class Percept :
 					history[x,y] = 0
 				else :
 					if history[x,y] != MAX :
-						history[x,y] += 5
+						history[x,y] += 1
 
 		return history
 
