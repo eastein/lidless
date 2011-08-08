@@ -97,9 +97,17 @@ class Percept :
 				img[x,y] = 0
 		return img
 
-	def filter_for_blobs(self, img) :
+	def get_wh(self, img) :
 		height, width = cv.GetSize(img)
-		img_out = cv.CreateMat(width, height, cv.CV_8U)
+		return width, height
+
+	def create_image_matching_size(self, img, depth) :
+		width, height = self.get_wh(img)
+		img_out = cv.CreateMat(width, height, depth)
+		return width, height, img_out
+
+	def filter_for_blobs(self, img) :
+		width, height, img_out = self.create_image_matching_size(img, cv.CV_8U)
 
 		THRESHOLD = 80
 		RATIO = .3
@@ -124,16 +132,38 @@ class Percept :
 
 		return img_out
 
+	def frames_ago(self, motionframe, history) :
+		MAX = 256 - 1
+
+		if history is None :
+			width, height, history = self.create_image_matching_size(motionframe, cv.CV_8U)
+			for x in range(width) :
+				for y in range(height) :
+					history[x,y] = MAX
+		else :
+			width, height = self.get_wh(motionframe)
+
+		for x in range(width) :
+			for y in range(height) :
+				if motionframe[x,y] > 0 :
+					history[x,y] = 0
+				else :
+					if history[x,y] != MAX :
+						history[x,y] += 5
+
+		return history
+
 if __name__ == '__main__' :
 	p = Percept()
 	url = sys.argv[1]
 	streamer = zmstream.ZMStreamer(1, url)
 	edge_bin = {}
+	history = None
 	for i in streamer.generate() :
 		img = p.image_jpegstr(i)
 
 		filtered = p.filter_edges(img)
-		cv.SaveImage('edges.png', filtered)
+		#cv.SaveImage('edges.png', filtered)
 
 		new_bin = p.bin_edgecount(filtered)
 
@@ -142,7 +172,11 @@ if __name__ == '__main__' :
 
 		motion_image = p.bins_to_img(diff)
 		if motion_image :
-			cv.SaveImage('motion.png', p.filter_for_blobs(motion_image))
+			blob_motion = p.filter_for_blobs(motion_image)
+			#cv.SaveImage('motion.png', blob_motion)
+
+			history = p.frames_ago(blob_motion, history)
+			cv.SaveImage('cumulative.png', history)
 
 		for k in diff :
 			diff[k] = '=' * (diff[k] / 5)
