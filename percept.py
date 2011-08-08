@@ -5,8 +5,13 @@ import pprint
 import os
 import sys
 import tempfile
+import threading
 
-class Percept :
+class Percept(threading.Thread) :
+	def __init__(self, url) :
+		self.url = url
+		threading.Thread.__init__(self)
+
 	def image_jpegstr(self, jpeg_str) :
 		# this isn't great but OpenCV's a bit of a jerk about loading images
 		fn = tempfile.mktemp('.jpg')
@@ -162,31 +167,31 @@ class Percept :
 					c += 1
 		return c / float(width * height)
 
-if __name__ == '__main__' :
-	p = Percept()
-	url = sys.argv[1]
-	streamer = zmstream.ZMStreamer(1, url)
-	edge_bin = {}
-	history = None
-	for i in streamer.generate() :
-		img = p.image_jpegstr(i)
+	def run(self) :
+		self.ratio_busy = 0
+		
+		streamer = zmstream.ZMStreamer(1, self.url)
+		edge_bin = {}
+		history = None
+		for i in streamer.generate() :
+			img = self.image_jpegstr(i)
 
-		filtered = p.filter_edges(img)
-		#cv.SaveImage('edges.png', filtered)
+			filtered = self.filter_edges(img)
+			#cv.SaveImage('edges.png', filtered)
 
-		new_bin = p.bin_edgecount(filtered)
+			new_bin = self.bin_edgecount(filtered)
 
-		diff = p.dict_diff(new_bin, edge_bin)
-		edge_bin = new_bin
+			diff = self.dict_diff(new_bin, edge_bin)
+			edge_bin = new_bin
 
-		motion_image = p.bins_to_img(diff)
-		if motion_image :
-			blob_motion = p.filter_for_blobs(motion_image)
-			#cv.SaveImage('motion.png', blob_motion)
+			motion_image = self.bins_to_img(diff)
+			if motion_image :
+				blob_motion = self.filter_for_blobs(motion_image)
+				#cv.SaveImage('motion.png', blob_motion)
 
-			history = p.frames_ago(blob_motion, history)
-			FPS = 2
-			BUSY_SEC = 120
-			BUSY_THR = FPS * BUSY_SEC
-			print 'ratio busy within %d sec: %0.3f' % (BUSY_SEC, p.ratio_lte_thr(history, BUSY_THR))
-			cv.SaveImage('cumulative.png', history)
+				history = self.frames_ago(blob_motion, history)
+				FPS = 2
+				BUSY_SEC = 120
+				BUSY_THR = FPS * BUSY_SEC
+				self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
+				cv.SaveImage('cumulative.png', history)
