@@ -24,5 +24,10 @@ class Lidless(irclib.SimpleIRCClient) :
 			self.connection.privmsg(chan, 'the space is %d%% busy right now.' % int(self.percept.ratio_busy * 100))
 
 if __name__ == '__main__' :
-	p = Lidless(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
-	p.start()
+	l = Lidless(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+	try :
+		l.start()
+	except KeyboardInterrupt :
+		print 'exiting'
+	finally :
+		l.percept.stop()

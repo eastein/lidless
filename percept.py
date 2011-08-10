@@ -10,6 +10,7 @@ import threading
 class Percept(threading.Thread) :
 	def __init__(self, url) :
 		self.url = url
+		self.ok = True
 		threading.Thread.__init__(self)
 
 	def image_jpegstr(self, jpeg_str) :
@@ -167,13 +168,21 @@ class Percept(threading.Thread) :
 					c += 1
 		return c / float(width * height)
 
+	def stop(self) :
+		self.ok = False
+		if hasattr(self, 'streamer') :
+			self.streamer.ok = False
+
 	def run(self) :
 		self.ratio_busy = 0
 		
-		streamer = zmstream.ZMStreamer(1, self.url)
+		self.streamer = zmstream.ZMStreamer(1, self.url)
 		edge_bin = {}
 		history = None
-		for i in streamer.generate() :
+		for i in self.streamer.generate() :
+			if not self.ok :
+				return
+			
 			img = self.image_jpegstr(i)
 
 			filtered = self.filter_edges(img)
@@ -194,4 +203,5 @@ class Percept(threading.Thread) :
 				BUSY_SEC = 120
 				BUSY_THR = FPS * BUSY_SEC
 				self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
+				print 'ratio busy: %0.3f' % self.ratio_busy
 				cv.SaveImage('cumulative.png', history)
