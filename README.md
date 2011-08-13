@@ -17,3 +17,8 @@ You'll need a ZoneMinder server for this to be useful, although it may work with
 # HOWTO
 
 It's best to read the source to understand how to invoke lidless successfully right now, it's very much in a state of flux.
+
+<A name="toc1-20" title="API" />
+# API
+
+See API document for details of the API.
