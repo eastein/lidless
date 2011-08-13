@@ -47,8 +47,8 @@ class LidlessWeb(threading.Thread) :
 	def run(self) :
 		self.application = tornado.web.Application([
 			(r"/$", ListHandler),
-			(r"/([^/]+)/$", CamHandler),
-			(r"/([^/]+)/ratio/$", RatioHandler),
+			(r"/([^/]+)$", CamHandler),
+			(r"/([^/]+)/ratio$", RatioHandler),
 		])
 		self.application.__percepts__ = self.percepts
 		self.application.listen(8000)
