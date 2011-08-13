@@ -3,7 +3,24 @@
 import sys
 import percept
 import irclib
+import time
 import signal
+import threading
+
+class IRCThread(threading.Thread) :
+	def __init__(self, client) :
+		self.client = client
+		self.ok = True
+		threading.Thread.__init__(self)
+
+	def stop(self) :
+		self.client.clean_shutdown()
+		time.sleep(1)
+		self.ok = False
+
+	def run(self) :
+		while self.ok :
+			self.client.ircobj.process_once(0.2)
 
 class Lidless(irclib.SimpleIRCClient) :
 	def __init__(self, server, nick, chan, perc) :
@@ -38,13 +55,44 @@ class Lidless(irclib.SimpleIRCClient) :
 			
 			self.connection.privmsg(chan, msg)
 
+class ThreadCloser(object) :
+	def __init__(self) :
+		self.thrs = []
+
+	def add(self, thr) :
+		self.thrs.append(thr)
+
+	def stop(self) :
+		print 'stopping'
+		for t in self.thrs :
+			t.stop()
+		print 'joining'
+		for t in self.thrs :
+			t.join()
+			print 'joined thread %s' % str(t)
+		self.thrs = []
+
+	@property
+	def done(self) :
+		return self.thrs == []
+
 if __name__ == '__main__' :
+	t = ThreadCloser()
+	
 	perc = percept.Percept(sys.argv[4])
 	perc.start()
+	t.add(perc)
+
 	l = Lidless(sys.argv[1], sys.argv[2], sys.argv[3], perc)
-	try :
-		l.start()
-	except KeyboardInterrupt :
-		print 'exiting'
-	finally :
-		perc.stop()
+	irct = IRCThread(l)
+	irct.start()
+	t.add(irct)
+
+	signal.signal(signal.SIGTERM, lambda a,b: t.stop())
+
+	while not t.done :
+		try :
+			while not t.done :
+				time.sleep(.1)
+		except KeyboardInterrupt :
+			t.stop()
