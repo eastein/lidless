@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 import sys
-import percept
-import irclib
 import time
 import signal
 import threading
+
+import irclib
+
+import percept
+import lidlessweb
 
 class IRCThread(threading.Thread) :
 	def __init__(self, client) :
@@ -22,7 +25,7 @@ class IRCThread(threading.Thread) :
 		while self.ok :
 			self.client.ircobj.process_once(0.2)
 
-class Lidless(irclib.SimpleIRCClient) :
+class LidlessIRC(irclib.SimpleIRCClient) :
 	def __init__(self, server, nick, chan, perc) :
 		self.percept = perc
 		
@@ -55,7 +58,7 @@ class Lidless(irclib.SimpleIRCClient) :
 			
 			self.connection.privmsg(chan, msg)
 
-class ThreadCloser(object) :
+class ThreadManager(object) :
 	def __init__(self) :
 		self.thrs = []
 
@@ -77,16 +80,20 @@ class ThreadCloser(object) :
 		return self.thrs == []
 
 if __name__ == '__main__' :
-	t = ThreadCloser()
+	t = ThreadManager()
 	
 	perc = percept.Percept(sys.argv[4])
 	perc.start()
 	t.add(perc)
 
-	l = Lidless(sys.argv[1], sys.argv[2], sys.argv[3], perc)
+	l = LidlessIRC(sys.argv[1], sys.argv[2], sys.argv[3], perc)
 	irct = IRCThread(l)
 	irct.start()
 	t.add(irct)
+
+	lweb = lidlessweb.LidlessWeb({'camera1' : perc})
+	lweb.start()
+	t.add(lweb)
 
 	signal.signal(signal.SIGTERM, lambda a,b: t.stop())
 
