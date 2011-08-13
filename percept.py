@@ -6,11 +6,20 @@ import os
 import sys
 import tempfile
 import threading
+import time
+
+NO_FRAME_THR = 10
+BUSY_SEC = 120
+SEC_BEFORE_UNK = 20
+FPS = 1
+BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
 	def __init__(self, url) :
 		self.url = url
 		self.ok = True
+		self.frame_time = None
+		self.ratio_busy = None
 		threading.Thread.__init__(self)
 
 	def image_jpegstr(self, jpeg_str) :
@@ -176,8 +185,18 @@ class Percept(threading.Thread) :
 	def connect(self) :
 		self.streamer = zmstream.ZMStreamer(1, self.url)
 
+	@property
+	def busy(self) :
+		if self.ratio_busy is None or self.frame_time is None :
+			# either no history has been acquired or no frame at all has been acquired; either way, no data
+			return None
+
+		if self.frame_time < time.time() - SEC_BEFORE_UNK :
+			return None
+
+		return self.ratio_busy
+
 	def run(self) :
-		self.ratio_busy = 0
 		edge_bin = {}
 		history = None
 
@@ -187,6 +206,8 @@ class Percept(threading.Thread) :
 				for i in self.streamer.generate() :
 					if not self.ok :
 						return
+
+					self.frame_time = time.time()
 			
 					img = self.image_jpegstr(i)
 
@@ -204,9 +225,7 @@ class Percept(threading.Thread) :
 						#cv.SaveImage('motion.png', blob_motion)
 
 						history = self.frames_ago(blob_motion, history)
-						FPS = 2
-						BUSY_SEC = 120
-						BUSY_THR = FPS * BUSY_SEC
+
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
 						print 'ratio busy: %0.3f' % self.ratio_busy
 						cv.SaveImage('cumulative.png', history)

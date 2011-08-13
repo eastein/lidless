@@ -3,15 +3,24 @@
 import sys
 import percept
 import irclib
+import signal
 
 class Lidless(irclib.SimpleIRCClient) :
-	def __init__(self, server, nick, chan, zm_url) :
-		self.percept = percept.Percept(zm_url)
-		self.percept.start()
+	def __init__(self, server, nick, chan, perc) :
+		self.percept = perc
 		
 		irclib.SimpleIRCClient.__init__(self)
+		self.disconnecting = False
 		self.connect(server, 6667, nick)
 		self.connection.join(chan)
+	
+	def clean_shutdown(self) :
+		if not self.disconnecting :
+			self.disconnecting = True
+			try :
+				self.disconnect("lidless exiting")
+			except :
+				pass
 	
 	def on_join(self, c, e) :
 		pass
@@ -21,13 +30,21 @@ class Lidless(irclib.SimpleIRCClient) :
 		txt = e.arguments()[0]
 
 		if txt == '!space' :
-			self.connection.privmsg(chan, 'the space is %d%% busy right now.' % int(self.percept.ratio_busy * 100))
+			bus = self.percept.busy
+			if bus is None :
+				msg = "I can't see! Help! Call an ambulance! (or the admin)"
+			else :
+				msg = 'the space is %d%% busy right now.' % int(bus * 100)
+			
+			self.connection.privmsg(chan, msg)
 
 if __name__ == '__main__' :
-	l = Lidless(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+	perc = percept.Percept(sys.argv[4])
+	perc.start()
+	l = Lidless(sys.argv[1], sys.argv[2], sys.argv[3], perc)
 	try :
 		l.start()
 	except KeyboardInterrupt :
 		print 'exiting'
 	finally :
-		l.percept.stop()
+		perc.stop()
