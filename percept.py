@@ -173,35 +173,42 @@ class Percept(threading.Thread) :
 		if hasattr(self, 'streamer') :
 			self.streamer.ok = False
 
+	def connect(self) :
+		self.streamer = zmstream.ZMStreamer(1, self.url)
+
 	def run(self) :
 		self.ratio_busy = 0
-		
-		self.streamer = zmstream.ZMStreamer(1, self.url)
 		edge_bin = {}
 		history = None
-		for i in self.streamer.generate() :
-			if not self.ok :
-				return
+
+		while self.ok :
+			try :
+				self.connect()
+				for i in self.streamer.generate() :
+					if not self.ok :
+						return
 			
-			img = self.image_jpegstr(i)
+					img = self.image_jpegstr(i)
 
-			filtered = self.filter_edges(img)
-			#cv.SaveImage('edges.png', filtered)
+					filtered = self.filter_edges(img)
+					#cv.SaveImage('edges.png', filtered)
 
-			new_bin = self.bin_edgecount(filtered)
+					new_bin = self.bin_edgecount(filtered)
 
-			diff = self.dict_diff(new_bin, edge_bin)
-			edge_bin = new_bin
+					diff = self.dict_diff(new_bin, edge_bin)
+					edge_bin = new_bin
 
-			motion_image = self.bins_to_img(diff)
-			if motion_image :
-				blob_motion = self.filter_for_blobs(motion_image)
-				#cv.SaveImage('motion.png', blob_motion)
+					motion_image = self.bins_to_img(diff)
+					if motion_image :
+						blob_motion = self.filter_for_blobs(motion_image)
+						#cv.SaveImage('motion.png', blob_motion)
 
-				history = self.frames_ago(blob_motion, history)
-				FPS = 2
-				BUSY_SEC = 120
-				BUSY_THR = FPS * BUSY_SEC
-				self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
-				print 'ratio busy: %0.3f' % self.ratio_busy
-				cv.SaveImage('cumulative.png', history)
+						history = self.frames_ago(blob_motion, history)
+						FPS = 2
+						BUSY_SEC = 120
+						BUSY_THR = FPS * BUSY_SEC
+						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
+						print 'ratio busy: %0.3f' % self.ratio_busy
+						cv.SaveImage('cumulative.png', history)
+			except zmstream.Timeout :
+				print 'timed out on stream, re-acquiring'
