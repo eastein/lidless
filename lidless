@@ -11,28 +11,42 @@ import percept
 import lidlessweb
 
 class IRCThread(threading.Thread) :
-	def __init__(self, client) :
-		self.client = client
+	def __init__(self, server, nick, chan, perc) :
+		self.server = server
+		self.nick = nick
+		self.chan = chan
+		self.perc = perc
 		self.ok = True
 		threading.Thread.__init__(self)
 
 	def stop(self) :
+		self.ok = False
 		self.client.clean_shutdown()
 		time.sleep(1)
-		self.ok = False
 
 	def run(self) :
 		while self.ok :
-			self.client.ircobj.process_once(0.2)
+			print 'creating new irc connection'
+			self.client = LidlessIRC(self.server, self.nick, self.chan, self.perc)
+
+			while not self.client.dead :
+				self.client.ircobj.process_once(0.2)
 
 class LidlessIRC(irclib.SimpleIRCClient) :
 	def __init__(self, server, nick, chan, perc) :
 		self.percept = perc
+		self.dead = False
 		
 		irclib.SimpleIRCClient.__init__(self)
+		self._server = server
+		self._nick = nick
+		self._chan = chan
+		self.conn()
+
+	def conn(self) :
 		self.disconnecting = False
-		self.connect(server, 6667, nick)
-		self.connection.join(chan)
+		self.connect(self._server, 6667, self._nick)
+		self.connection.join(self._chan)
 	
 	def clean_shutdown(self) :
 		if not self.disconnecting :
@@ -41,7 +55,13 @@ class LidlessIRC(irclib.SimpleIRCClient) :
 				self.disconnect("lidless exiting")
 			except :
 				pass
+		print 'shut down cleanly'
+		self.dead = True
 	
+	def on_disconnect(self, c, e) :
+		print 'got disconnect'
+		self.dead = True
+
 	def on_join(self, c, e) :
 		pass
 
@@ -86,8 +106,7 @@ if __name__ == '__main__' :
 	perc.start()
 	t.add(perc)
 
-	l = LidlessIRC(sys.argv[1], sys.argv[2], sys.argv[3], perc)
-	irct = IRCThread(l)
+	irct = IRCThread(sys.argv[1], sys.argv[2], sys.argv[3], perc)
 	irct.start()
 	t.add(irct)
 
