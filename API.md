@@ -18,6 +18,6 @@
 
 All requests shall be GET.  No authentication shall be required.
 
-* /: return list of camera names available
-* /camname: return list of camera capabilities.  Capabilities can be accessed via /camname/capname/args.
-* /camname/ratio: get current ratio.  Will be a floating point number if it's available, string error otherwise.
+* /api/: return list of camera names available
+* /api/camname: return list of camera capabilities.  Capabilities can be accessed via /api/camname/capname.
+* /api/camname/ratio: get current ratio.  Will be a floating point number if it's available, string error otherwise.

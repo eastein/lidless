@@ -39,6 +39,10 @@ class RatioHandler(JSONHandler):
 	def process_request(self, camname):
 		return self.percs[camname].ratio_busy
 
+class InterfaceHandler(tornado.web.RequestHandler) :
+	def get(self) :
+		self.write(self.application.__interface__)
+
 class LidlessWeb(threading.Thread) :
 	def __init__(self, percepts) :
 		self.percepts = percepts
@@ -46,11 +50,13 @@ class LidlessWeb(threading.Thread) :
 
 	def run(self) :
 		self.application = tornado.web.Application([
-			(r"/$", ListHandler),
-			(r"/([^/]+)$", CamHandler),
-			(r"/([^/]+)/ratio$", RatioHandler),
+			(r"/$", InterfaceHandler),
+			(r"/api/$", ListHandler),
+			(r"/api/([^/]+)$", CamHandler),
+			(r"/api/([^/]+)/ratio$", RatioHandler),
 		])
 		self.application.__percepts__ = self.percepts
+		self.application.__interface__ = open('interface.html').read()
 		self.application.listen(8000)
 
 
