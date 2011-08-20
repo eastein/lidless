@@ -121,9 +121,9 @@ if __name__ == '__main__' :
 	perc.start()
 	t.add(perc)
 
-	hist = historical.History(perc)
-	hist.start()
-	t.add(hist)
+	perc.history = historical.History(perc)
+	perc.history.start()
+	t.add(perc.history)
 
 	irct = IRCThread(server, nick, chan, perc)
 	irct.start()

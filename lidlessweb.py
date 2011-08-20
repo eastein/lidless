@@ -33,11 +33,18 @@ class CamHandler(JSONHandler):
 	def process_request(self, camname):
 		if camname not in self.percs :
 			raise KeyError
-		return ['ratio']
+		cap = ['ratio']
+		if hasattr(self.percs[camname], 'history') :
+			cap.append('history')
+		return cap
 
 class RatioHandler(JSONHandler):
 	def process_request(self, camname):
 		return self.percs[camname].ratio_busy
+
+class HistoryHandler(JSONHandler):
+	def process_request(self, camname):
+		return [t.asdict for t in self.percs[camname].history.history(3600 * 1000)]
 
 class InterfaceHandler(tornado.web.RequestHandler) :
 	def get(self) :
@@ -54,6 +61,7 @@ class LidlessWeb(threading.Thread) :
 			(r"/api/$", ListHandler),
 			(r"/api/([^/]+)$", CamHandler),
 			(r"/api/([^/]+)/ratio$", RatioHandler),
+			(r"/api/([^/]+)/history$", HistoryHandler),
 		])
 		self.application.__percepts__ = self.percepts
 		self.application.__interface__ = open('interface.html').read()

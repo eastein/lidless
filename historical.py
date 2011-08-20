@@ -10,11 +10,24 @@ class History(threading.Thread) :
 		self.err_ms = err_ms
 		self.ok = True
 		self.q = Queue.Queue()
+		self.history_trace = None
 		threading.Thread.__init__(self)
 
 	def stop(self) :
 		self.ok = False
 		self.q.put(None)
+
+	def history(self, ms_ago_start, ms_ago_end=0) :
+		if ms_ago_start <= ms_ago_end :
+			return []
+		if ms_ago_start < 0 or ms_ago_end < 0 :
+			return []
+
+		n = ramirez.mcore.events.tick()
+		s = n - ms_ago_start
+		e = n - ms_ago_end
+
+		return self.history_trace.read(s, e).result()
 
 	def run(self) :
 		self.history_trace = ramirez.mcore.trace.Trace(self.percept.camname , "%s.db" % self.percept.camname, self.ms, self.err_ms, 0)
