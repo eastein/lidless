@@ -58,7 +58,7 @@ class LidlessWeb(threading.Thread) :
 	def run(self) :
 		self.application = tornado.web.Application([
 			(r"/$", InterfaceHandler),
-			(r"/api/$", ListHandler),
+			(r"/api$", ListHandler),
 			(r"/api/([^/]+)$", CamHandler),
 			(r"/api/([^/]+)/ratio$", RatioHandler),
 			(r"/api/([^/]+)/history$", HistoryHandler),
