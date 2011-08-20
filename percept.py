@@ -15,7 +15,8 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, url) :
+	def __init__(self, camname, url) :
+		self.camname = camname
 		self.url = url
 		self.ok = True
 		self.frame_time = None

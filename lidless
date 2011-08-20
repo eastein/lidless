@@ -8,6 +8,7 @@ import threading
 import irclib
 
 import percept
+import historical
 import lidlessweb
 
 class IRCThread(threading.Thread) :
@@ -74,7 +75,7 @@ class LidlessIRC(irclib.SimpleIRCClient) :
 			if bus is None :
 				msg = "I can't see! Help! Call an ambulance! (or the admin)"
 			else :
-				msg = 'the space is %d%% busy right now.' % int(bus * 100)
+				msg = 'the space is %d%% busy right now.' % round(bus * 100)
 			
 			self.connection.privmsg(chan, msg)
 
@@ -99,18 +100,38 @@ class ThreadManager(object) :
 	def done(self) :
 		return self.thrs == []
 
+def usage() :
+	print 'usage: lidless server nick chan url'
+	sys.exit(1)
+
 if __name__ == '__main__' :
+	try :
+		url = sys.argv[4]
+		server = sys.argv[1]
+		nick = sys.argv[2]
+		chan = sys.argv[3]
+	except IndexError :
+		usage()
+
+	percepts = {}
+
 	t = ThreadManager()
 	
-	perc = percept.Percept(sys.argv[4])
+	perc = percept.Percept('camera1', url)
 	perc.start()
 	t.add(perc)
 
-	irct = IRCThread(sys.argv[1], sys.argv[2], sys.argv[3], perc)
+	hist = historical.History(perc)
+	hist.start()
+	t.add(hist)
+
+	irct = IRCThread(server, nick, chan, perc)
 	irct.start()
 	t.add(irct)
 
-	lweb = lidlessweb.LidlessWeb({'camera1' : perc})
+	percepts[perc.camname] = perc
+
+	lweb = lidlessweb.LidlessWeb(percepts)
 	lweb.start()
 	t.add(lweb)
 
