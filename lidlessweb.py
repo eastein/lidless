@@ -2,6 +2,7 @@ import threading
 import tornado.web
 import tornado.ioloop
 import ramirez.mcore.events
+import os.path
 
 class JSONHandler(tornado.web.RequestHandler):
 	@property
@@ -26,6 +27,20 @@ class JSONHandler(tornado.web.RequestHandler):
 
 		self.wj(resp)
 
+class JSHandler(tornado.web.RequestHandler):
+	def get(self, fn):
+		if not hasattr(self.__class__, 'fcache') :
+			self.__class__.fcache = {}
+
+		if fn in self.__class__.fcache :
+			self.write(self.__class__.fcache[fn])
+		else :
+			ffn = os.path.join('flot', fn)
+			if not os.path.exists(ffn) :
+				raise tornado.web.HTTPError(404)
+			d = open(ffn).read()
+			self.__class__.fcache[fn] = d
+			self.write(d)
 
 class ListHandler(JSONHandler):
 	def process_request(self):
@@ -122,6 +137,7 @@ class LidlessWeb(threading.Thread) :
 	def run(self) :
 		self.application = tornado.web.Application([
 			(r"/$", InterfaceHandler),
+			(r"/flot/([a-z0-9\.\-]+\.js)$", JSHandler), # pattern is a security issue, be careful!
 			(r"/api$", ListHandler),
 			(r"/api/([^/]+)$", CamHandler),
 			(r"/api/([^/]+)/ratio$", RatioHandler),
