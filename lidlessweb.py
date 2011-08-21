@@ -1,6 +1,7 @@
 import threading
 import tornado.web
 import tornado.ioloop
+import ramirez.mcore.events
 
 class JSONHandler(tornado.web.RequestHandler):
 	@property
@@ -17,6 +18,7 @@ class JSONHandler(tornado.web.RequestHandler):
 		except KeyError :
 			error = 'not found'
 		except :
+			# TODO print or log stacktrace
 			error = 'exception'
 
 		if error :
@@ -42,9 +44,71 @@ class RatioHandler(JSONHandler):
 	def process_request(self, camname):
 		return self.percs[camname].ratio_busy
 
+class TicksHandler(JSONHandler):
+	def process_request(self, camname):
+		s, e, ticks = self.percs[camname].history.history(3600 * 1000)
+		return [t.asdict for t in ticks]
+
 class HistoryHandler(JSONHandler):
 	def process_request(self, camname):
-		return [t.asdict for t in self.percs[camname].history.history(3600 * 1000)]
+		# ms must evenly divide into bins for this logic to be valid!
+		ms_range = 3600 * 1000
+		nbins = 30
+
+		bin_ms = ms_range / nbins
+		bins = [list() for i in range(nbins)]
+
+		# get start time end time and tick data
+		s, e, ticks = self.percs[camname].history.history(ms_range)
+
+		bin_bounds = [(s + bin_ms * i, s + bin_ms * (i + 1)) for i in range(nbins)]
+
+		for tick in ticks :
+			# when the tick starts
+			ts = tick.start_ms
+			# when the tick's influence ends (tick period past the last sample)
+			te = tick.end_ms + tick.tick_ms
+
+			# compute the total number of ms in the tick
+			ms = te - ts
+			# compute total number of samples in the tick (votes)
+			samples = (tick.end_ms - tick.start_ms) / tick.tick_ms + 1
+
+			# compute the range of bin indexes that this tick has influence in
+			bin_begin = max(0, long(ts - s) / bin_ms)
+			bin_end = min(nbins - 1, long(te - s) / bin_ms)
+
+			for bin in range(bin_begin, bin_end + 1) :
+				# now we know this tick has influence that falls within this bin. compute how much.
+				overlap_s = max(ts, bin_bounds[bin][0])
+				overlap_e = min(te, bin_bounds[bin][1])
+
+				overlap_ms = overlap_e - overlap_s
+				
+				# ratio portion of the tick that falls within this bin
+				tickpart = float(overlap_ms) / float(ms)
+				# determine how many sample-votes the value can be cast with in the bin
+				votes = samples * tickpart
+				# cast vote in bin
+				bins[bin].append((votes, tick.value))
+
+		values = [0] * nbins
+
+		# tally votes
+		for bin in range(nbins) :
+			votes = 0.0
+			tvalue = 0.0
+			
+			for vote, value in bins[bin] :
+				votes += vote
+				tvalue += vote * value
+
+			if votes <= 0.0 :
+				continue
+			
+			values[bin] = tvalue / votes
+
+		return values
 
 class InterfaceHandler(tornado.web.RequestHandler) :
 	def get(self) :
@@ -61,12 +125,12 @@ class LidlessWeb(threading.Thread) :
 			(r"/api$", ListHandler),
 			(r"/api/([^/]+)$", CamHandler),
 			(r"/api/([^/]+)/ratio$", RatioHandler),
+			(r"/api/([^/]+)/ticks$", TicksHandler),
 			(r"/api/([^/]+)/history$", HistoryHandler),
 		])
 		self.application.__percepts__ = self.percepts
 		self.application.__interface__ = open('interface.html').read()
 		self.application.listen(8000)
-
 
 		self.io_instance = tornado.ioloop.IOLoop.instance()
 		self.io_instance.start()

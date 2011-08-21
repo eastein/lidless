@@ -21,4 +21,5 @@ All requests shall be GET.  No authentication shall be required.
 * /api: return list of camera names available
 * /api/camname: return list of camera capabilities.  Capabilities can be accessed via /api/camname/capname.
 * /api/camname/ratio: get current ratio.  Will be a floating point number if it's available.
-* /api/camname/history: get 1 hour of ratio history.  Format of data is in flux.
+* /api/camname/ticks: get 1 hour of ratio history in raw form.  To be documented.
+* /api/camname/history: get 1 hour of ratio history in binned average form.  To be documented.

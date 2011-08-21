@@ -27,7 +27,7 @@ class History(threading.Thread) :
 		s = n - ms_ago_start
 		e = n - ms_ago_end
 
-		return self.history_trace.read(s, e).result()
+		return s, e, self.history_trace.read(s, e).result()
 
 	def run(self) :
 		self.history_trace = ramirez.mcore.trace.Trace(self.percept.camname , "%s.db" % self.percept.camname, self.ms, self.err_ms, 0)
