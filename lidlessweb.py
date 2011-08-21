@@ -53,6 +53,7 @@ class CamHandler(JSONHandler):
 		cap = ['ratio']
 		if hasattr(self.percs[camname], 'history') :
 			cap.append('history')
+			cap.append('ticks')
 		return cap
 
 class RatioHandler(JSONHandler):
@@ -67,6 +68,7 @@ class TicksHandler(JSONHandler):
 class HistoryHandler(JSONHandler):
 	def process_request(self, camname):
 		# ms must evenly divide into bins for this logic to be valid!
+		# ms must be even, probably
 		ms_range = 3600 * 1000
 		nbins = 30
 
@@ -77,6 +79,7 @@ class HistoryHandler(JSONHandler):
 		s, e, ticks = self.percs[camname].history.history(ms_range)
 
 		bin_bounds = [(s + bin_ms * i, s + bin_ms * (i + 1)) for i in range(nbins)]
+		bin_mids = [s + bin_ms * i + bin_ms / 2 for i in range(nbins)]
 
 		for tick in ticks :
 			# when the tick starts
@@ -123,7 +126,7 @@ class HistoryHandler(JSONHandler):
 			
 			values[bin] = tvalue / votes
 
-		return values
+		return zip(bin_mids, values)
 
 class InterfaceHandler(tornado.web.RequestHandler) :
 	def get(self) :
