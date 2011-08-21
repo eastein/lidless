@@ -29,6 +29,7 @@ class IRCThread(threading.Thread) :
 		while self.ok :
 			print 'creating new irc connection'
 			self.client = LidlessIRC(self.server, self.nick, self.chan, self.perc)
+			self.client.conn()
 
 			while not self.client.dead :
 				self.client.ircobj.process_once(0.2)
@@ -42,7 +43,6 @@ class LidlessIRC(irclib.SimpleIRCClient) :
 		self._server = server
 		self._nick = nick
 		self._chan = chan
-		self.conn()
 
 	def conn(self) :
 		self.disconnecting = False
