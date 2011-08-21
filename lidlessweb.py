@@ -70,7 +70,7 @@ class HistoryHandler(JSONHandler):
 		# ms must evenly divide into bins for this logic to be valid!
 		# ms must be even, probably
 		ms_range = 3600 * 1000
-		nbins = 30
+		nbins = 120
 
 		bin_ms = ms_range / nbins
 		bins = [list() for i in range(nbins)]
