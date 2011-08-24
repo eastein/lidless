@@ -23,3 +23,4 @@ All requests shall be GET.  No authentication shall be required.
 * /api/camname/ratio: get current ratio.  Will be a floating point number if it's available.
 * /api/camname/ticks: get 1 hour of ratio history in raw form.  To be documented.
 * /api/camname/history: get 1 hour of ratio history in binned average form.  To be documented.
+* /api/camname/history/range_ms: get range_ms of ratio history in binned average form.  To be documented.
