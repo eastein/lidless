@@ -16,11 +16,13 @@ class JSONHandler(tornado.web.RequestHandler):
 		error = None
 		try :
 			resp = {'status' : 'ok', 'data' : self.process_request(*a)}
+		except ValueError :
+			error = 'bad input'
 		except KeyError :
 			error = 'not found'
-		except :
-			# TODO print or log stacktrace
-			error = 'exception'
+		#except :
+		#	# TODO print or log stacktrace
+		#	error = 'exception'
 
 		if error :
 			resp = {'status' : 'failure', 'reason' : error}
@@ -66,10 +68,11 @@ class TicksHandler(JSONHandler):
 		return [t.asdict for t in ticks]
 
 class HistoryHandler(JSONHandler):
-	def process_request(self, camname):
+	def process_request(self, camname, ms_range=3600*1000):
 		# ms must evenly divide into bins for this logic to be valid!
+		# FIXME constrain that
 		# ms must be even, probably
-		ms_range = 3600 * 1000
+		ms_range = long(ms_range)
 		nbins = 120
 
 		bin_ms = ms_range / nbins
@@ -146,6 +149,7 @@ class LidlessWeb(threading.Thread) :
 			(r"/api/([^/]+)/ratio$", RatioHandler),
 			(r"/api/([^/]+)/ticks$", TicksHandler),
 			(r"/api/([^/]+)/history$", HistoryHandler),
+			(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
 		])
 		self.application.__percepts__ = self.percepts
 		self.application.__interface__ = open('interface.html').read()

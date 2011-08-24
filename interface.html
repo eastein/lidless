@@ -26,9 +26,12 @@ function start_callback() {
 	});
 }
 
+var camera1_timeout;
+var camera1_period = 3600*1000;
+
 function start_history() {
 	$.ajax({
-		url: '/api/camera1/history',
+		url: '/api/camera1/history/' + camera1_period,
 		dataType: 'json',
 		success : function(data) {
 			$.plot($("#camera1trace"), [data.data], {
@@ -36,7 +39,8 @@ function start_history() {
 				xaxis: { mode: "time" },
 				yaxis: { min: 0 }
 			});
-			setTimeout(start_history, 1000 * 30);
+			// FIXME no hardcode for 120
+			camera1_timeout = setTimeout(start_history, camera1_period / 120);
 		},
 		failure: function(data) {
 			alert("Call failed for some reason. Reload the page.");
@@ -44,9 +48,36 @@ function start_history() {
 	});
 }
 
+function set_history(per) {
+	camera1_period = per;
+	clearTimeout(camera1_timeout);
+	start_history();
+}
+
 $(function () {
 	start_callback();
 	start_history();
+
+	$("#quarter").click(function () {
+		set_history(60*15*1000);
+	});
+
+	$("#hour").click(function () {
+		set_history(3600*1000);
+	});
+
+	$("#four").click(function () {
+		set_history(4*3600*1000);
+	});
+
+	$("#day").click(function () {
+		set_history(24*3600*1000);
+	});
+
+	$("#week").click(function () {
+		set_history(7*24*3600*1000);
+	});
+
 });     
     
 </script>
@@ -55,7 +86,13 @@ $(function () {
 <br />
 <div style="text-align: center; width: 100%;">
 <div id="camera1trace" style="width:80%;height:150px;margin: auto;"></div>
+<br />
 <tt>Note: times are UTC.</tt>
+<button id="quarter">15 minutes</button>
+<button id="hour">hour</button>
+<button id="four">four hours</button>
+<button id="day">1 day</button>
+<button id="week">1 week</button>
 </div>
 </body>
 </html>
