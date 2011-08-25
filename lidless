@@ -118,11 +118,17 @@ if __name__ == '__main__' :
 	except IndexError :
 		webport = 8000
 
+	try :
+		# FIXME regex check here
+		camname = sys.argv[6]
+	except IndexError :
+		camname = 'camera1'
+
 	percepts = {}
 
 	t = ThreadManager()
 	
-	perc = percept.Percept('camera1', url)
+	perc = percept.Percept(camname, url)
 	perc.start()
 	t.add(perc)
 
