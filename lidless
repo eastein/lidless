@@ -101,7 +101,7 @@ class ThreadManager(object) :
 		return self.thrs == []
 
 def usage() :
-	print 'usage: lidless server nick chan url'
+	print 'usage: lidless server nick chan url [port]'
 	sys.exit(1)
 
 if __name__ == '__main__' :
@@ -112,6 +112,11 @@ if __name__ == '__main__' :
 		chan = sys.argv[3]
 	except IndexError :
 		usage()
+
+	try :
+		webport = int(sys.argv[5])
+	except IndexError :
+		webport = 8000
 
 	percepts = {}
 
@@ -131,7 +136,7 @@ if __name__ == '__main__' :
 
 	percepts[perc.camname] = perc
 
-	lweb = lidlessweb.LidlessWeb(percepts)
+	lweb = lidlessweb.LidlessWeb(percepts, port=webport)
 	lweb.start()
 	t.add(lweb)
 

@@ -20,9 +20,9 @@ class JSONHandler(tornado.web.RequestHandler):
 			error = 'bad input'
 		except KeyError :
 			error = 'not found'
-		#except :
-		#	# TODO print or log stacktrace
-		#	error = 'exception'
+		except :
+			# TODO print or log stacktrace
+			error = 'exception'
 
 		if error :
 			resp = {'status' : 'failure', 'reason' : error}
@@ -136,8 +136,9 @@ class InterfaceHandler(tornado.web.RequestHandler) :
 		self.write(self.application.__interface__)
 
 class LidlessWeb(threading.Thread) :
-	def __init__(self, percepts) :
+	def __init__(self, percepts, port=8000) :
 		self.percepts = percepts
+		self.port = port
 		threading.Thread.__init__(self)
 
 	def run(self) :
@@ -153,7 +154,7 @@ class LidlessWeb(threading.Thread) :
 		])
 		self.application.__percepts__ = self.percepts
 		self.application.__interface__ = open('interface.html').read()
-		self.application.listen(8000)
+		self.application.listen(self.port)
 
 		self.io_instance = tornado.ioloop.IOLoop.instance()
 		self.io_instance.start()
