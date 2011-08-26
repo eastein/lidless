@@ -2,7 +2,6 @@
 
 import sys
 import time
-import signal
 import threading
 
 import irclib
@@ -145,9 +144,7 @@ if __name__ == '__main__' :
 	lweb = lidlessweb.LidlessWeb(percepts, port=webport)
 	lweb.start()
 	t.add(lweb)
-
-	signal.signal(signal.SIGTERM, lambda a,b: t.stop())
-
+	
 	while not t.done :
 		try :
 			while not t.done :
