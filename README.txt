@@ -13,6 +13,14 @@ lidless is a program for monitoring a ZoneMinder camera feed and interfacing it 
 
 You'll need a ZoneMinder server for this to be useful, although it may work with motion-jpeg http streams.
 
+# Video Sources
+
+Please see the README for the version of `zmstream` you are using to determine what cameras and video sources will be supported by your install.
+
+## PTZ Cameras
+
+Be aware that if you are using a pan/tilt/zoom camera, lidless's motion data will produce bad data around the periods when you move the camera.  The algorithms for motion detection depend on the camera's view being of the same field of view at all times.
+
 # HOWTO
 
 You'll want to write a config file in JSON.
@@ -36,6 +44,8 @@ Here is an example:
       "type" : "web",
       "port" : 8000
     }]
+
+The username and password options only work with HTTP basic authentication at this time.  They are optional.  HTTPS does not work for camera sources.
 
 # API
 
