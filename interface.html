@@ -27,7 +27,7 @@ height: 120px;
 <script type="text/javascript">
 
 var cams;
-var camera1_timeout;
+var history_timeout;
 var period = 3600*1000;
 
 function camera_discover() {
@@ -69,7 +69,7 @@ function start_ratio() {
 	for (var i in cams) {
 		ajax_ratio(cams[i]);
 	}
-	setTimeout(start_ratio, 1000);
+	setTimeout(start_ratio, 10000);
 }
 
 function ajax_history(camname) {
@@ -89,13 +89,12 @@ function start_history() {
 	for (var i in cams) {
 		ajax_history(cams[i]);
 	}
-	// FIXME no hardcode for 120
-	camera1_timeout = setTimeout(start_history, period / 120);
+	history_timeout = setTimeout(start_history, period / 40);
 }
 
 function set_history(per) {
 	period = per;
-	clearTimeout(camera1_timeout);
+	clearTimeout(history_timeout);
 	start_history();
 }
 
