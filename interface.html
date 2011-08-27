@@ -21,15 +21,12 @@ function start_ratio() {
 				var mytext = "Unk%";
 			} else {
 				mytext = Math.round(data.data * 100) + '%';
-
 			}
-			$('div.ratio').html(mytext);
-			setTimeout(start_ratio, 1000);
-		},
-		failure: function(data) {
-			alert("Call failed for some reason. Reload the page.");
+			$('#camera1ratio').html(mytext);
+
 		}
 	});
+	setTimeout(start_ratio, 1000);
 }
 
 var camera1_timeout;
@@ -41,17 +38,13 @@ function start_history() {
 		dataType: 'json',
 		success : function(data) {
 			$.plot($("#camera1trace"), [data.data], {
-				color: 'green',
 				xaxis: { mode: "time" },
 				yaxis: { min: 0 }
 			});
-			// FIXME no hardcode for 120
-			camera1_timeout = setTimeout(start_history, camera1_period / 120);
-		},
-		failure: function(data) {
-			alert("Call failed for some reason. Reload the page.");
 		}
 	});
+	// FIXME no hardcode for 120
+	camera1_timeout = setTimeout(start_history, camera1_period / 120);
 }
 
 function set_history(per) {
@@ -91,7 +84,7 @@ $(function () {
 
 <h3>camera1</h3>
 <div style="text-align: center; width: 100%;">
-	<div style="float: left; text-align: center; font-size: 63pt; vertical-align: middle; width: 20%; height: 120px;" id="ratio" class="ratio">Unk%</div>
+	<div style="float: left; text-align: center; font-size: 63pt; vertical-align: middle; width: 20%; height: 120px;" id="camera1ratio">Unk%</div>
 
 	<div>
 	<div id="camera1trace" style="float: right; width:76%;height:120px;margin: auto;">
