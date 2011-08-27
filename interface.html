@@ -3,6 +3,22 @@
 <head profile="http://gmpg.org/xfn/11">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>Lidless Web</title>
+<style>
+div.trace {
+float: right;
+width:76%;
+height:120px;
+margin: auto;
+}
+div.ratio {
+float: left;
+text-align: center;
+font-size: 63pt;
+vertical-align: middle;
+width: 20%;
+height: 120px;
+}
+</style>
 </head>
 <!--[if lte IE 8]><script language="javascript" type="text/javascript" src="/flot/excanvas.min.js"></script><![endif]-->
 <script language="javascript" type="text/javascript" src="/flot/jquery.js"></script>
@@ -10,10 +26,31 @@
 </script>
 <script type="text/javascript">
 
-// ratio callback cycle; 1000ms live refresh
-function start_ratio() {
+var cams;
+var camera1_timeout;
+var period = 3600*1000;
+
+function camera_discover() {
 	$.ajax({
-		url: '/api/camera1/ratio',
+		url: '/api',
+		dataType: 'json',
+		success: function(data) {
+			var graphhtml = '';
+			for (var i in data.data) {
+				var camname = data.data[i];
+				graphhtml = graphhtml + '<h3>' + camname + '</h3><div style="text-align: center; width: 100%;"><div id="' + camname + 'ratio" class="ratio">Unk%</div><div id="' + camname + 'trace" class="trace"></div></div>';
+			}
+			$('#graphs').html(graphhtml);
+			cams = data.data;
+			start_ratio();
+			start_history();
+		}
+	});
+}
+
+function ajax_ratio(camname) {
+	$.ajax({
+		url: '/api/' + camname + '/ratio',
 		dataType: 'json',
 		success: function(data) {
 			var mytext;
@@ -22,41 +59,49 @@ function start_ratio() {
 			} else {
 				mytext = Math.round(data.data * 100) + '%';
 			}
-			$('#camera1ratio').html(mytext);
+			$('#' + camname + 'ratio').html(mytext);
 
 		}
 	});
+}
+
+function start_ratio() {
+	for (var i in cams) {
+		ajax_ratio(cams[i]);
+	}
 	setTimeout(start_ratio, 1000);
 }
 
-var camera1_timeout;
-var camera1_period = 3600*1000;
-
-function start_history() {
+function ajax_history(camname) {
 	$.ajax({
-		url: '/api/camera1/history/' + camera1_period,
+		url: '/api/' + camname + '/history/' + period,
 		dataType: 'json',
 		success : function(data) {
-			$.plot($("#camera1trace"), [data.data], {
+			$.plot($("#" + camname + "trace"), [data.data], {
 				xaxis: { mode: "time" },
 				yaxis: { min: 0 }
 			});
 		}
 	});
+}
+
+function start_history() {
+	for (var i in cams) {
+		ajax_history(cams[i]);
+	}
 	// FIXME no hardcode for 120
-	camera1_timeout = setTimeout(start_history, camera1_period / 120);
+	camera1_timeout = setTimeout(start_history, period / 120);
 }
 
 function set_history(per) {
-	camera1_period = per;
+	period = per;
 	clearTimeout(camera1_timeout);
 	start_history();
 }
 
 $(function () {
-	start_ratio();
-	start_history();
-
+	camera_discover();
+	
 	$("#quarter").click(function () {
 		set_history(60*15*1000);
 	});
@@ -82,14 +127,8 @@ $(function () {
 </script>
 <body style="height: 100%;">
 
-<h3>camera1</h3>
-<div style="text-align: center; width: 100%;">
-	<div style="float: left; text-align: center; font-size: 63pt; vertical-align: middle; width: 20%; height: 120px;" id="camera1ratio">Unk%</div>
+<div id="graphs">
 
-	<div>
-	<div id="camera1trace" style="float: right; width:76%;height:120px;margin: auto;">
-	</div>
-	</div>
 </div>
 
 <div style="float: right; width:76%;height:120px;margin: auto; text-align: center;">
