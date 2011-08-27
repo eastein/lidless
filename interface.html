@@ -11,20 +11,20 @@
 <script type="text/javascript">
 
 // ratio callback cycle; 1000ms live refresh
-function start_callback() {
+function start_ratio() {
 	$.ajax({
 		url: '/api/camera1/ratio',
 		dataType: 'json',
 		success: function(data) {
 			var mytext;
 			if (data.data == null) {
-				var mytext = ":( %";
+				var mytext = "Unk%";
 			} else {
 				mytext = Math.round(data.data * 100) + '%';
 
 			}
 			$('div.ratio').html(mytext);
-			setTimeout(start_callback, 1000);
+			setTimeout(start_ratio, 1000);
 		},
 		failure: function(data) {
 			alert("Call failed for some reason. Reload the page.");
@@ -61,7 +61,7 @@ function set_history(per) {
 }
 
 $(function () {
-	start_callback();
+	start_ratio();
 	start_history();
 
 	$("#quarter").click(function () {
@@ -88,18 +88,26 @@ $(function () {
     
 </script>
 <body style="height: 100%;">
-<div style="text-align: center; font-size: 170pt; vertical-align: middle; width: 100%; height: 100%;" id="ratio" class="ratio">Checking..</div>
-<br />
+
+<h3>camera1</h3>
 <div style="text-align: center; width: 100%;">
-<div id="camera1trace" style="width:80%;height:150px;margin: auto;"></div>
-<br />
-<tt>Note: times are UTC.</tt>
-<button id="quarter">15 minutes</button>
-<button id="hour">hour</button>
-<button id="four">four hours</button>
-<button id="day">1 day</button>
-<button id="week">1 week</button>
+	<div style="float: left; text-align: center; font-size: 63pt; vertical-align: middle; width: 20%; height: 120px;" id="ratio" class="ratio">Unk%</div>
+
+	<div>
+	<div id="camera1trace" style="float: right; width:76%;height:120px;margin: auto;">
+	</div>
+	</div>
 </div>
+
+<div style="float: right; width:76%;height:120px;margin: auto; text-align: center;">
+	<tt>Note: times are UTC.</tt>
+	<button id="quarter">15 minutes</button>
+	<button id="hour">hour</button>
+	<button id="four">four hours</button>
+	<button id="day">1 day</button>
+	<button id="week">1 week</button>
+</div>
+
 </body>
 </html>
 
