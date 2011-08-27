@@ -114,8 +114,9 @@ class ThreadManager(object) :
 		return self.thrs == []
 
 def usage() :
+	# TODO take a 'what you did wrong' string and display it with the usage
 	raise RuntimeError
-	print 'usage: lidless server nick chan url [port]'
+	print 'usage: lidless <configfile>'
 	sys.exit(1)
 
 def all_in(stanza, keys) :
