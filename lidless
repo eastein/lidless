@@ -4,6 +4,7 @@ import sys
 import time
 import threading
 
+import json
 import irclib
 
 import percept
@@ -34,8 +35,8 @@ class IRCThread(threading.Thread) :
 				self.client.ircobj.process_once(0.2)
 
 class LidlessIRC(irclib.SimpleIRCClient) :
-	def __init__(self, server, nick, chan, perc) :
-		self.percept = perc
+	def __init__(self, server, nick, chan, percepts) :
+		self.percepts = percepts
 		self.dead = False
 		
 		irclib.SimpleIRCClient.__init__(self)
@@ -70,11 +71,20 @@ class LidlessIRC(irclib.SimpleIRCClient) :
 		txt = e.arguments()[0]
 
 		if txt == '!space' :
-			bus = self.percept.busy
-			if bus is None :
-				msg = "I can't see! Help! Call an ambulance! (or the admin)"
+			if not self.percepts :
+				msg = 'no cameras.'
 			else :
-				msg = 'the space is %d%% busy right now.' % round(bus * 100)
+				msgs = []
+				for pname in self.percepts :
+					bus = percepts[pname].busy
+
+					if bus is None :
+						state = "unknown"
+					else :
+						state = '%d%% busy' % round(bus * 100)
+
+					msgs.append('%s: %s' % (pname, state))
+				msg = ', '.join(msgs)
 			
 			self.connection.privmsg(chan, msg)
 
@@ -84,6 +94,10 @@ class ThreadManager(object) :
 
 	def add(self, thr) :
 		self.thrs.append(thr)
+
+	def start(self) :
+		for t in self.thrs :
+			t.start()
 
 	def stop(self) :
 		print 'stopping'
@@ -100,51 +114,68 @@ class ThreadManager(object) :
 		return self.thrs == []
 
 def usage() :
+	raise RuntimeError
 	print 'usage: lidless server nick chan url [port]'
 	sys.exit(1)
 
+def all_in(stanza, keys) :
+	for k in keys :
+		if k not in stanza :
+			usage()
+
 if __name__ == '__main__' :
+#	try :
+	fh = open(sys.argv[1])
 	try :
-		url = sys.argv[4]
-		server = sys.argv[1]
-		nick = sys.argv[2]
-		chan = sys.argv[3]
-	except IndexError :
-		usage()
-
-	try :
-		webport = int(sys.argv[5])
-	except IndexError :
-		webport = 8000
-
-	try :
-		# FIXME regex check here
-		camname = sys.argv[6]
-	except IndexError :
-		camname = 'camera1'
-
-	percepts = {}
+		conf = json.load(fh)
+	finally :
+		fh.close()
+	#except :
+#		usage()
 
 	t = ThreadManager()
+	percepts = {}
+
+	if not isinstance(conf, list) :
+		usage()
+
+	# TODO regexes for all the setting types, people are crazy
+	for stanza in conf :
+		if not isinstance(stanza, dict) :
+			usage()
+		if 'type' not in stanza :
+			usage()
+
+		if stanza['type'] == 'camera' :
+			all_in(stanza, ['url', 'name'])
+		else :
+			continue
+
+		auth = None
+		if 'username' in stanza or 'password' in stanza :
+			all_in(stanza, ['username', 'password'])
+			auth = stanza['username'], stanza['password']
+
+		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth)
+		t.add(perc)
+
+		perc.history = historical.History(perc)
+		t.add(perc.history)
+
+		percepts[perc.camname] = perc
+
+	for stanza in conf :
+		if stanza['type'] == 'irc' :
+			all_in(stanza, ['server', 'nick', 'channel'])
+			irct = IRCThread(stanza['server'], stanza['nick'], stanza['channel'], percepts)
+			t.add(irct)
+		elif stanza['type'] == 'web' :
+			all_in(stanza, ['port'])
+			lweb = lidlessweb.LidlessWeb(percepts, stanza['port'])
+			t.add(lweb)
 	
-	perc = percept.Percept(camname, url)
-	perc.start()
-	t.add(perc)
+	t.start()
 
-	perc.history = historical.History(perc)
-	perc.history.start()
-	t.add(perc.history)
-
-	irct = IRCThread(server, nick, chan, perc)
-	irct.start()
-	t.add(irct)
-
-	percepts[perc.camname] = perc
-
-	lweb = lidlessweb.LidlessWeb(percepts, port=webport)
-	lweb.start()
-	t.add(lweb)
-	
 	while not t.done :
 		try :
 			while not t.done :

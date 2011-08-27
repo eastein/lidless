@@ -1,7 +1,7 @@
 <A name="toc1-0" title="What's This?" />
 # What's This?
 
-lidless is a program for monitoring a ZoneMinder camera feed and interfacing it to IRC, allowing users to request info on how busy the view captured by the camera is.
+lidless is a program for monitoring a ZoneMinder camera feed and interfacing it to IRC and the web, allowing users to request info on how busy the view captured by the camera is and view historical information about busyness.
 
 <A name="toc1-5" title="Dependencies" />
 # Dependencies
@@ -18,9 +18,29 @@ You'll need a ZoneMinder server for this to be useful, although it may work with
 <A name="toc1-17" title="HOWTO" />
 # HOWTO
 
-It's best to read the source to understand how to invoke lidless successfully right now, it's very much in a state of flux.
+You'll want to write a config file in JSON.
 
-<A name="toc1-22" title="API" />
+Here is an example:
+
+    [{
+      "type" : "camera",
+      "name" : "warehouse",
+      "url" : "http://1.2.3.4/mjpg/video.mjpg",
+      "username" : "john",
+      "password" : "doe"
+    },
+    {
+      "type" : "irc",
+      "server" : "irc.example.org",
+      "nick" : "someguy",
+      "channel" : "#irc"
+    },
+    {
+      "type" : "web",
+      "port" : 8000
+    }]
+
+<A name="toc1-42" title="API" />
 # API
 
 See API document for details of the API.
