@@ -60,7 +60,7 @@ class CamHandler(JSONHandler):
 
 class RatioHandler(JSONHandler):
 	def process_request(self, camname):
-		return self.percs[camname].ratio_busy
+		return self.percs[camname].busy
 
 class TicksHandler(JSONHandler):
 	def process_request(self, camname):

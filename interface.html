@@ -16,7 +16,13 @@ function start_callback() {
 		url: '/api/camera1/ratio',
 		dataType: 'json',
 		success: function(data) {
-			var mytext = Math.round(data.data * 100) + '%';
+			var mytext;
+			if (data.data == null) {
+				var mytext = ":( %";
+			} else {
+				mytext = Math.round(data.data * 100) + '%';
+
+			}
 			$('div.ratio').html(mytext);
 			setTimeout(start_callback, 1000);
 		},

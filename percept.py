@@ -12,6 +12,7 @@ NO_FRAME_THR = 10
 BUSY_SEC = 120
 SEC_BEFORE_UNK = 20
 FPS = 1
+#FIXME if BUSY_THR goes over the max number for the last-motion buffer, ratio will be 1.0 all the time
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
@@ -181,10 +182,19 @@ class Percept(threading.Thread) :
 	def stop(self) :
 		self.ok = False
 		if hasattr(self, 'streamer') :
-			self.streamer.ok = False
+			self.streamer.stop()
+
+	def join(self) :
+		if hasattr(self, 'streamer') and isinstance(self.streamer, threading.Thread):
+			self.streamer.join()
+		threading.Thread.join(self)
 
 	def connect(self) :
-		self.streamer = zmstream.ZMStreamer(1, self.url)
+		if hasattr(self, 'streamer') :
+			self.streamer.stop()
+			self.streamer.join()
+		self.streamer = zmstream.ZMThrottle(1, self.url)
+		self.streamer.start()
 
 	@property
 	def busy(self) :
@@ -204,12 +214,12 @@ class Percept(threading.Thread) :
 		while self.ok :
 			try :
 				self.connect()
-				for i in self.streamer.generate() :
+				for ts, i in self.streamer.generate() :
 					if not self.ok :
 						return
 
-					self.frame_time = time.time()
-			
+					self.frame_time = ts
+
 					img = self.image_jpegstr(i)
 
 					filtered = self.filter_edges(img)
@@ -229,6 +239,10 @@ class Percept(threading.Thread) :
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
 						print 'ratio busy: %0.3f' % self.ratio_busy
-						cv.SaveImage('cumulative.png', history)
+						#cv.SaveImage('cumulative.png', history)
+
+					# TODO fitful sleep that checks self.ok
+					wait = max(0, 1.0/FPS + ts - time.time())
+					time.sleep(wait)
 			except zmstream.Timeout :
 				print 'timed out on stream, re-acquiring'
