@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 
+SOCKET_RETRY_SEC = 10
 NO_FRAME_THR = 10
 BUSY_SEC = 120
 SEC_BEFORE_UNK = 20
@@ -208,6 +209,12 @@ class Percept(threading.Thread) :
 
 		return self.ratio_busy
 
+	def checkedwait(self, secs) :
+		for i in range(secs * 10) :
+			if not self.ok :
+				break
+			time.sleep(0.1)
+
 	def run(self) :
 		edge_bin = {}
 		history = None
@@ -247,3 +254,6 @@ class Percept(threading.Thread) :
 					time.sleep(wait)
 			except zmstream.Timeout :
 				print 'timed out on stream, re-acquiring'
+			except zmstream.SocketError :
+				print 'socket error, re-acquiring in %d.' % SOCKET_RETRY_SEC
+				self.checkedwait(SOCKET_RETRY_SEC)
