@@ -209,6 +209,7 @@ class Percept(threading.Thread) :
 
 		return self.ratio_busy
 
+	# move to a base
 	def checkedwait(self, secs) :
 		for i in range(secs * 10) :
 			if not self.ok :
