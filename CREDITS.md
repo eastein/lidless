@@ -1,7 +1,7 @@
 <A name="toc1-0" title="It Monitors a Village" />
 # It Monitors a Village
 
-I talked to a bunch of people while I was working on lidless.  As I can't guarantee that I'll remember to update this document, so this might be incomplete.  Actual code contributions are clear from reading the git history so I won't talk about that - although at the moment all the code is by me (Eric Stein).
+I talked to a bunch of people while I was working on lidless.  As I can't guarantee that I'll remember to update this document, this might be incomplete.  Actual code contributions are clear from reading the git history - although at the moment all the code is by me (Eric Stein).
 
 <A name="toc1-5" title="Props" />
 # Props
