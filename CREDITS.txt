@@ -1,0 +1,9 @@
+# It Monitors a Village
+
+I talked to a bunch of people while I was working on lidless.  As I can't guarantee that I'll remember to update this document, so this might be incomplete.  Actual code contributions are clear from reading the git history so I won't talk about that - although at the moment all the code is by me (Eric Stein).
+
+# Props
+
+* Anton "Tony" Kapela - general wizardry regarding image recognition and relevant thoughts about how video encoder themes apply to my project. Suggested the use of median filters. Overall baller.
+* Dan "loclhost" Delaney - platform testing, feature requests, bug reports, helped out with setting up cameras for initial development.
+* Pumping Station: One - I developed the code and set up the first live install at PS:One and everyone had great thoughts and offered tons of encouragement.

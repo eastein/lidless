@@ -50,3 +50,7 @@ The username and password options only work with HTTP basic authentication at th
 # API
 
 See API document for details of the API.
+
+# See Also
+
+See CREDITS for props to people who helped out.

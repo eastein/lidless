@@ -27,14 +27,16 @@ class History(threading.Thread) :
 		s = n - ms_ago_start
 		e = n - ms_ago_end
 
-		return s, e, self.history_trace.read(s, e).result()
+		return s, e, self.history_trace.read(s, e)
 
 	def run(self) :
+		# TODO what if read or write come in before the thread passes here? what then?
 		self.history_trace = ramirez.mcore.trace.Trace(self.percept.camname , "%s.db" % self.percept.camname, self.ms, self.err_ms, 0)
 
 		while self.ok :
 			ratio = self.percept.busy
 			if ratio is not None :
+				# TODO handle exception here somehow?
 				self.history_trace.write(round(ratio * 100))
 
 			try :

@@ -1,6 +1,7 @@
 import threading
 import tornado.web
 import tornado.ioloop
+import concurrent.futures as futures
 import ramirez.mcore.events
 import os.path
 
@@ -10,12 +11,28 @@ class JSONHandler(tornado.web.RequestHandler):
 		return self.application.__percepts__
 
 	def wj(self, j) :
-		self.write(j)
+		self.application.__io_instance__.add_callback(lambda: self._wj(j))
 
+	def _wj(self, j) :
+		self.write(j)
+		self.finish()
+
+	@tornado.web.asynchronous
 	def get(self, *a):
+		fut = self.process_request(*a)
+		if isinstance(fut, futures.Future) :
+			fut.add_done_callback(self.handle_response)
+		else :
+			self.handle_response(fut)
+
+	def handle_response(self, fut) :
 		error = None
 		try :
-			resp = {'status' : 'ok', 'data' : self.process_request(*a)}
+			if isinstance(fut, futures.Future) :
+				result = fut.result()
+			else :
+				result = fut
+			resp = {'status' : 'ok', 'data' : result}
 		except ValueError :
 			error = 'bad input'
 		except KeyError :
@@ -65,7 +82,7 @@ class RatioHandler(JSONHandler):
 class TicksHandler(JSONHandler):
 	def process_request(self, camname):
 		s, e, ticks = self.percs[camname].history.history(3600 * 1000)
-		return [t.asdict for t in ticks]
+		return [t.asdict for t in ticks.result()]
 
 class HistoryHandler(JSONHandler):
 	def process_request(self, camname, ms_range=3600*1000):
@@ -80,6 +97,8 @@ class HistoryHandler(JSONHandler):
 
 		# get start time end time and tick data
 		s, e, ticks = self.percs[camname].history.history(ms_range)
+
+		ticks = ticks.result()
 
 		bin_bounds = [(s + bin_ms * i, s + bin_ms * (i + 1)) for i in range(nbins)]
 		bin_mids = [s + bin_ms * i + bin_ms / 2 for i in range(nbins)]
@@ -154,10 +173,12 @@ class LidlessWeb(threading.Thread) :
 		])
 		self.application.__percepts__ = self.percepts
 		self.application.__interface__ = open('interface.html').read()
+		# TODO catch bind error here!
 		self.application.listen(self.port)
 
-		self.io_instance = tornado.ioloop.IOLoop.instance()
-		self.io_instance.start()
+		self.application.__io_instance__ = tornado.ioloop.IOLoop.instance()
+		self.application.__io_instance__.start()
 
 	def stop(self) :
-		self.io_instance.stop()
+		if hasattr(self.application, '__io_instance__') :
+			self.application.__io_instance__.stop()

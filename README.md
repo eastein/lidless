@@ -56,3 +56,8 @@ The username and password options only work with HTTP basic authentication at th
 # API
 
 See API document for details of the API.
+
+<A name="toc1-59" title="See Also" />
+# See Also
+
+See CREDITS for props to people who helped out.
