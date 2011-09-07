@@ -11,7 +11,7 @@ lidless is a program for monitoring a ZoneMinder camera feed and interfacing it 
 * CPython 2.6 or 2.7 (other pythons may work as well)
 * python-irclib
 
-You'll need a ZoneMinder server for this to be useful, although it may work with motion-jpeg http streams.
+You'll want a ZoneMinder server for this to be useful for a wide variety of camera streams, or if you have a motion jpeg http streaming camera, you will probably be able to use it directly.
 
 # Video Sources
 
