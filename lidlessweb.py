@@ -95,8 +95,14 @@ class HistoryHandler(JSONHandler):
 		bin_ms = ms_range / nbins
 		bins = [list() for i in range(nbins)]
 
+		hist = self.percs[camname].history.history(ms_range)
+
+		if hist is None :
+			# this means that the historical trace is not started. give up.
+			raise tornado.web.HTTPError(501)
+		
 		# get start time end time and tick data
-		s, e, ticks = self.percs[camname].history.history(ms_range)
+		s, e, ticks = hist
 
 		ticks = ticks.result()
 

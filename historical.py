@@ -18,6 +18,9 @@ class History(threading.Thread) :
 		self.q.put(None)
 
 	def history(self, ms_ago_start, ms_ago_end=0) :
+		if self.history_trace is None :
+			return None
+		
 		if ms_ago_start <= ms_ago_end :
 			return []
 		if ms_ago_start < 0 or ms_ago_end < 0 :
@@ -30,7 +33,6 @@ class History(threading.Thread) :
 		return s, e, self.history_trace.read(s, e)
 
 	def run(self) :
-		# TODO what if read or write come in before the thread passes here? what then?
 		self.history_trace = ramirez.mcore.trace.Trace(self.percept.camname , "%s.db" % self.percept.camname, self.ms, self.err_ms, 0)
 
 		while self.ok :
