@@ -1,7 +1,7 @@
 <A name="toc1-0" title="What's This?" />
 # What's This?
 
-lidless is a program for monitoring a ZoneMinder camera feed and interfacing it to IRC and the web, allowing users to request info on how busy the view captured by the camera is and view historical information about busyness.
+lidless is a program for monitoring motion-jpeg camera feeds and interfacing them to IRC and the web, allowing users to request info on how busy the view captured by the cameras are and view historical information about busyness.
 
 <A name="toc1-5" title="Dependencies" />
 # Dependencies
