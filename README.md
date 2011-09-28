@@ -50,7 +50,7 @@ Here is an example:
       "port" : 8000
     }]
 
-The username and password options only work with HTTP basic authentication at this time.  They are optional.  HTTPS does not work for camera sources.
+The username and password options work with HTTP basic authentication or ZoneMinder's time based authentication session at this time.  They are optional.  HTTPS does not work for camera sources.  If you want to go through ZoneMinder, the URL must end with auth= (the GET parameter for auth must be at the end), the zm_auth_hash_secret parameter must be added into the camera JSON stanza, and the password is the password in the ZoneMinder database (already hashed).
 
 <A name="toc1-54" title="API" />
 # API

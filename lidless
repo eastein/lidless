@@ -77,11 +77,13 @@ if __name__ == '__main__' :
 			continue
 
 		auth = None
+		zm_auth_hash_secret = None
 		if 'username' in stanza or 'password' in stanza :
 			all_in(stanza, ['username', 'password'])
 			auth = stanza['username'], stanza['password']
-
-		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth)
+			if 'zm_auth_hash_secret' in stanza :
+				zm_auth_hash_secret = stanza['zm_auth_hash_secret']
+		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_auth_hash_secret)
 		t.add(perc)
 
 		perc.history = historical.History(perc)

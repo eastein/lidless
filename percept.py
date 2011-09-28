@@ -17,10 +17,11 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, camname, url, auth=None) :
+	def __init__(self, camname, url, auth=None, zm_auth_hash_secret=None) :
 		self.camname = camname
 		self.url = url
 		self.auth = auth
+		self.zm_auth_hash_secret = zm_auth_hash_secret
 		self.ok = True
 		self.frame_time = None
 		self.ratio_busy = None
@@ -195,7 +196,7 @@ class Percept(threading.Thread) :
 		if hasattr(self, 'streamer') :
 			self.streamer.stop()
 			self.streamer.join()
-		self.streamer = zmstream.ZMThrottle(1, self.url, auth=self.auth)
+		self.streamer = zmstream.ZMThrottle(1, self.url, auth=self.auth, zm_auth_hash_secret=self.zm_auth_hash_secret)
 		self.streamer.start()
 
 	@property
