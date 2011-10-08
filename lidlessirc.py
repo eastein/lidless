@@ -96,7 +96,8 @@ class IRCThread(threading.Thread) :
 
 	def stop(self) :
 		self.ok = False
-		self.client.clean_shutdown()
+		if hasattr(self, 'client') :
+			self.client.clean_shutdown()
 
 	# move to a base
 	def checkedwait(self, secs) :
