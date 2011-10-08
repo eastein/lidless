@@ -164,9 +164,13 @@ class LidlessWeb(threading.Thread) :
 	def __init__(self, percepts, port=8000) :
 		self.percepts = percepts
 		self.port = port
+		self.ok = True
 		threading.Thread.__init__(self)
 
 	def run(self) :
+		if not self.ok :
+			return
+		
 		self.application = tornado.web.Application([
 			(r"/$", InterfaceHandler),
 			(r"/flot/([a-z0-9\.\-]+\.js)$", JSHandler), # pattern is a security issue, be careful!
@@ -186,5 +190,7 @@ class LidlessWeb(threading.Thread) :
 		self.application.__io_instance__.start()
 
 	def stop(self) :
-		if hasattr(self.application, '__io_instance__') :
-			self.application.__io_instance__.stop()
+		self.ok = False
+		if hasattr(self, 'application') :
+			if hasattr(self.application, '__io_instance__') :
+				self.application.__io_instance__.stop()

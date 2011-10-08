@@ -4,7 +4,8 @@ import ramirez.mcore.events
 import ramirez.mcore.trace
 
 class History(threading.Thread) :
-	def __init__(self, percept, ms=60000, err_ms=1000) :
+	def __init__(self, camname, percept=None, ms=60000, err_ms=1000) :
+		self.camname = camname
 		self.percept = percept
 		self.ms = ms
 		self.err_ms = err_ms
@@ -32,8 +33,21 @@ class History(threading.Thread) :
 
 		return s, e, self.history_trace.read(s, e)
 
+	@property
+	def busy(self) :
+		if self.history_trace is None :
+			return None
+
+		# TODO do not hardcode for 10sec ago
+		tick = self.history_trace.read(ramirez.mcore.events.tick() - 10000).result()
+
+		if tick is None :
+			return None
+		else :
+			return tick.value
+
 	def run(self) :
-		self.history_trace = ramirez.mcore.trace.Trace(self.percept.camname, "%s.db" % self.percept.camname, self.ms, self.err_ms, 0)
+		self.history_trace = ramirez.mcore.trace.Trace(self.camname, "%s.db" % self.camname, self.ms, self.err_ms, 0)
 
 		while self.ok :
 			ratio = self.percept.busy

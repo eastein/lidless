@@ -40,7 +40,7 @@ class ThreadManager(object) :
 def usage() :
 	# TODO take a 'what you did wrong' string and display it with the usage
 	raise RuntimeError
-	print 'usage: lidless <configfile>'
+	print 'usage: lidless <configfile> [role]\n\n\tconfigfile should be json\n\trole is default, allows selecting certain roles for processing in different processes.'
 	sys.exit(1)
 
 def all_in(stanza, keys) :
@@ -48,15 +48,25 @@ def all_in(stanza, keys) :
 		if k not in stanza :
 			usage()
 
+def roled(role, stanza, thr) :
+	if stanza['role'] != role :
+		thr.stop()
+
 if __name__ == '__main__' :
-#	try :
-	fh = open(sys.argv[1])
+	fh = None
 	try :
+		fh = open(sys.argv[1])
 		conf = json.load(fh)
+	except :
+		usage()
 	finally :
-		fh.close()
-	#except :
-#		usage()
+		if fh :
+			fh.close()
+
+	try :
+		role = sys.argv[2]
+	except :
+		role = 'default'
 
 	t = ThreadManager()
 	percepts = {}
@@ -70,6 +80,9 @@ if __name__ == '__main__' :
 			usage()
 		if 'type' not in stanza :
 			usage()
+
+		if 'role' not in stanza :
+			stanza['role'] = 'default'
 
 		if stanza['type'] == 'camera' :
 			all_in(stanza, ['url', 'name'])
@@ -86,8 +99,11 @@ if __name__ == '__main__' :
 		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_auth_hash_secret)
 		t.add(perc)
 
-		perc.history = historical.History(perc)
+		perc.history = historical.History(perc.camname, perc)
 		t.add(perc.history)
+
+		roled(role, stanza, perc)
+		roled(role, stanza, perc.history)
 
 		percepts[perc.camname] = perc
 
@@ -96,10 +112,12 @@ if __name__ == '__main__' :
 			all_in(stanza, ['server', 'nick', 'channel'])
 			irct = lidlessirc.IRCThread(stanza['server'], stanza['nick'], stanza['channel'], percepts)
 			t.add(irct)
+			roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :
 			all_in(stanza, ['port'])
 			lweb = lidlessweb.LidlessWeb(percepts, stanza['port'])
 			t.add(lweb)
+			roled(role, stanza, lweb)
 	
 	t.start()
 

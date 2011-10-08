@@ -201,14 +201,20 @@ class Percept(threading.Thread) :
 
 	@property
 	def busy(self) :
-		if self.ratio_busy is None or self.frame_time is None :
-			# either no history has been acquired or no frame at all has been acquired; either way, no data
-			return None
+		if self.ok :
+			if self.ratio_busy is None or self.frame_time is None :
+				# no history or no frame at all has been acquired
+				return None
 
-		if self.frame_time < time.time() - SEC_BEFORE_UNK :
-			return None
+			if self.frame_time < time.time() - SEC_BEFORE_UNK :
+				return None
 
-		return self.ratio_busy
+			return self.ratio_busy
+		else :
+			if hasattr(self, 'history') :
+				b = self.history.busy
+				if b is not None :
+					return b / 100.0
 
 	# move to a base
 	def checkedwait(self, secs) :
