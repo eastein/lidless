@@ -115,7 +115,8 @@ if __name__ == '__main__' :
 			roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :
 			all_in(stanza, ['port'])
-			lweb = lidlessweb.LidlessWeb(percepts, stanza['port'])
+			stanza.setdefault('proxy_endpoint', None)
+			lweb = lidlessweb.LidlessWeb(percepts, port=stanza['port'], endpoint=stanza['proxy_endpoint'])
 			t.add(lweb)
 			roled(role, stanza, lweb)
 	

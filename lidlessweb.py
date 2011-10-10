@@ -1,9 +1,61 @@
 import threading
 import tornado.web
 import tornado.ioloop
+import tornado.httpclient
 import concurrent.futures as futures
 import ramirez.mcore.events
 import os.path
+
+class RequestSharer() :
+	def __init__(self, endpoint) :
+		self.endpoint = endpoint
+		self.rdict = dict()
+		self.rlock = threading.Lock()
+
+	"""
+	Returns whether a request is already underway or whether one must be started
+	"""
+	def register(self, url, inbound) :
+		with self.rlock :
+			if url in self.rdict :
+				self.rdict[url].append(inbound)
+				return True
+			else :
+				self.rdict[url] = [inbound]
+				return False
+
+	def respond(self, url, response) :
+		with self.rlock :
+			code = 200
+
+			if response.error :
+				if response.code :
+					code = response.code
+				body = response.body
+				headers = response.headers
+			else :
+				body = response.body
+				headers = response.headers
+			for inb in self.rdict[url] :
+				try :
+					inb.set_status(code)
+					for header in headers :
+						inb.set_header(header, headers[header])
+					inb.write(body)
+					inb.finish()
+				except :
+					print 'exception while trying to send proxy response'
+
+			del self.rdict[url]
+
+class ProxyingHandler(tornado.web.RequestHandler):
+	@tornado.web.asynchronous
+	def get(self, url) :
+		print '[proxyinghandler] GET %s' % url
+		if not self.application.__requestsharer__.register(url, self) :
+			http_client = tornado.httpclient.AsyncHTTPClient()
+			h = lambda resp: self.application.__requestsharer__.respond(url, resp)
+			http_client.fetch(self.application.__requestsharer__.endpoint + url, h)
 
 class JSONHandler(tornado.web.RequestHandler):
 	@property
@@ -161,28 +213,38 @@ class InterfaceHandler(tornado.web.RequestHandler) :
 		self.write(self.application.__interface__)
 
 class LidlessWeb(threading.Thread) :
-	def __init__(self, percepts, port=8000) :
+	def __init__(self, percepts, port=8000, endpoint=None) :
 		self.percepts = percepts
 		self.port = port
 		self.ok = True
+		self.endpoint = endpoint
 		threading.Thread.__init__(self)
 
 	def run(self) :
 		if not self.ok :
 			return
 		
-		self.application = tornado.web.Application([
-			(r"/$", InterfaceHandler),
-			(r"/flot/([a-z0-9\.\-]+\.js)$", JSHandler), # pattern is a security issue, be careful!
-			(r"/api$", ListHandler),
-			(r"/api/([^/]+)$", CamHandler),
-			(r"/api/([^/]+)/ratio$", RatioHandler),
-			(r"/api/([^/]+)/ticks$", TicksHandler),
-			(r"/api/([^/]+)/history$", HistoryHandler),
-			(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
-		])
-		self.application.__percepts__ = self.percepts
-		self.application.__interface__ = open('interface.html').read()
+		if not self.endpoint :
+			self.application = tornado.web.Application([
+				(r"/$", InterfaceHandler),
+				(r"/flot/([a-z0-9\.\-]+\.js)$", JSHandler), # pattern is a security issue, be careful!
+				(r"/api$", ListHandler),
+				(r"/api/([^/]+)$", CamHandler),
+				(r"/api/([^/]+)/ratio$", RatioHandler),
+				(r"/api/([^/]+)/ticks$", TicksHandler),
+				(r"/api/([^/]+)/history$", HistoryHandler),
+				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
+
+			])
+			self.application.__percepts__ = self.percepts
+			self.application.__interface__ = open('interface.html').read()
+		else :
+			self.application = tornado.web.Application([
+				(r"(/.*)$", ProxyingHandler),
+			])
+
+			self.application.__requestsharer__ = RequestSharer(self.endpoint)
+
 		# TODO catch bind error here!
 		self.application.listen(self.port)
 

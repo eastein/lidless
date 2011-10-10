@@ -52,12 +52,14 @@ Here is an example:
 
 The username and password options work with HTTP basic authentication or ZoneMinder's time based authentication session at this time.  They are optional.  HTTPS does not work for camera sources.  If you want to go through ZoneMinder, the URL must end with auth= (the GET parameter for auth must be at the end), the zm_auth_hash_secret parameter must be added into the camera JSON stanza, and the username/password should be a valid user in the ZoneMinder instance.
 
-<A name="toc1-54" title="API" />
+If you are having web interface or API performance issues, it's suggested to add a second web stanza with the `proxy_endpoint` set to the base url of the other web stanza; in the above example such a `proxy_endpoint` setting would be `"http://localhost:8000"`.
+
+<A name="toc1-56" title="API" />
 # API
 
 See API document for details of the API.
 
-<A name="toc1-59" title="See Also" />
+<A name="toc1-61" title="See Also" />
 # See Also
 
 See CREDITS for props to people who helped out.
