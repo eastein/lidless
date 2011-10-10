@@ -1,4 +1,6 @@
+import sys
 import threading
+import traceback
 import tornado.web
 import tornado.ioloop
 import tornado.httpclient
@@ -29,6 +31,7 @@ class RequestSharer() :
 			code = 200
 
 			if response.error :
+				print 'error retrieving %s' % url
 				if response.code :
 					code = response.code
 				body = response.body
@@ -36,6 +39,7 @@ class RequestSharer() :
 			else :
 				body = response.body
 				headers = response.headers
+			
 			for inb in self.rdict[url] :
 				try :
 					inb.set_status(code)
@@ -44,7 +48,8 @@ class RequestSharer() :
 					inb.write(body)
 					inb.finish()
 				except :
-					print 'exception while trying to send proxy response'
+					print 'exception while trying to send proxy response for %s' % url
+					traceback.print_exc()
 
 			del self.rdict[url]
 
