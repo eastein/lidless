@@ -51,6 +51,8 @@ def all_in(stanza, keys) :
 def roled(role, stanza, thr) :
 	if stanza['role'] != role :
 		thr.stop()
+		return True
+	return False
 
 if __name__ == '__main__' :
 	fh = None
@@ -73,6 +75,8 @@ if __name__ == '__main__' :
 
 	if not isinstance(conf, list) :
 		usage()
+
+	disqualified = True
 
 	# TODO regexes for all the setting types, people are crazy
 	for stanza in conf :
@@ -102,8 +106,8 @@ if __name__ == '__main__' :
 		perc.history = historical.History(perc.camname, perc)
 		t.add(perc.history)
 
-		roled(role, stanza, perc)
-		roled(role, stanza, perc.history)
+		disqualified &= roled(role, stanza, perc)
+		disqualified &= roled(role, stanza, perc.history)
 
 		percepts[perc.camname] = perc
 
@@ -112,14 +116,19 @@ if __name__ == '__main__' :
 			all_in(stanza, ['server', 'nick', 'channel'])
 			irct = lidlessirc.IRCThread(stanza['server'], stanza['nick'], stanza['channel'], percepts)
 			t.add(irct)
-			roled(role, stanza, irct)
+			disqualified &= roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :
 			all_in(stanza, ['port'])
 			stanza.setdefault('proxy_endpoint', None)
 			lweb = lidlessweb.LidlessWeb(percepts, port=stanza['port'], endpoint=stanza['proxy_endpoint'])
 			t.add(lweb)
-			roled(role, stanza, lweb)
+			disqualified &= roled(role, stanza, lweb)
 	
+	if disqualified :
+		# this means that none of the stanzas applied here: give up, this can accomplish nothing.
+		print 'Error: role %s has no active stanzas, aborting.' % role
+		sys.exit(1)
+
 	t.start()
 
 	while not t.done :
