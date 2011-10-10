@@ -74,6 +74,27 @@ class ProxyingHandler(tornado.web.RequestHandler):
 			h = lambda resp: self.application.__requestsharer__.respond(url, resp)
 			http_client.fetch(self.application.__requestsharer__.endpoint + url, h, request_timeout=120.0)
 
+class ProtoFuture(object) :
+	def __init__(self, fut, continuation) :
+		#print 'ProtoFuture.__init__'
+		self.fut = fut
+		self.continuation = continuation
+		self.cbs = []
+		self.fut.add_done_callback(self.completed)
+
+	def add_done_callback(self, cb) :
+		#print 'ProtoFuture.add_done_callback'
+		self.cbs.append(cb)
+
+	def completed(self, fut) :
+		#print 'ProtoFuture.completed'
+		for cb in self.cbs :
+			cb(self)
+
+	def result(self) :
+		#print 'ProtoFuture.result'
+		return self.continuation(self.fut.result())
+
 class JSONHandler(tornado.web.RequestHandler):
 	@property
 	def percs(self) :
@@ -88,26 +109,26 @@ class JSONHandler(tornado.web.RequestHandler):
 
 	@tornado.web.asynchronous
 	def get(self, *a):
-		fut = self.process_request(*a)
-		if isinstance(fut, futures.Future) :
-			fut.add_done_callback(self.handle_response)
+		result = self.process_request(*a)
+		if isinstance(result, (futures.Future, ProtoFuture)) :
+			result.add_done_callback(self.handle_response)
 		else :
-			self.handle_response(fut)
+			self.handle_response(result)
 
-	def handle_response(self, fut) :
+	def handle_response(self, result) :
 		error = None
 		try :
-			if isinstance(fut, futures.Future) :
-				result = fut.result()
-			else :
-				result = fut
+			if isinstance(result, (futures.Future, ProtoFuture)) :
+				result = result.result()
+			
 			resp = {'status' : 'ok', 'data' : result}
 		except ValueError :
 			error = 'bad input'
 		except KeyError :
 			error = 'not found'
 		except :
-			# TODO print or log stacktrace
+			print 'exception while fetching deferred result'
+			traceback.print_exc()
 			error = 'exception'
 
 		if error :
@@ -151,29 +172,39 @@ class RatioHandler(JSONHandler):
 class TicksHandler(JSONHandler):
 	def process_request(self, camname):
 		s, e, ticks = self.percs[camname].history.history(3600 * 1000)
-		return [t.asdict for t in ticks.result()]
+		cont = lambda hist: [t.asdict for t in hist]
+		return ProtoFuture(ticks, cont)
 
 class HistoryHandler(JSONHandler):
 	def process_request(self, camname, ms_range=3600*1000):
 		# ms must evenly divide into bins for this logic to be valid!
 		# FIXME constrain that
 		# ms must be even, probably
-		ms_range = long(ms_range)
-		nbins = 120
+		self._ms_range = long(ms_range)
+		self._nbins = 120
 
-		bin_ms = ms_range / nbins
-		bins = [list() for i in range(nbins)]
+		self._bin_ms = self._ms_range / self._nbins
+		self._bins = [list() for i in range(self._nbins)]
 
-		hist = self.percs[camname].history.history(ms_range)
+		hist = self.percs[camname].history.history(self._ms_range)
 
 		if hist is None :
 			# this means that the historical trace is not started. give up.
 			raise tornado.web.HTTPError(501)
 		
 		# get start time end time and tick data
-		s, e, ticks = hist
+		self._s, self._e, ticks = hist
+		return ProtoFuture(ticks, self.bin_ticks)
 
-		ticks = ticks.result()
+	def bin_ticks(self, ticks) :
+		ms_range = self._ms_range
+		nbins = self._nbins
+		bin_ms = self._bin_ms
+		ms_range = self._ms_range
+		bins = self._bins
+
+		s = self._s
+		e = self._e
 
 		bin_bounds = [(s + bin_ms * i, s + bin_ms * (i + 1)) for i in range(nbins)]
 		bin_mids = [s + bin_ms * i + bin_ms / 2 for i in range(nbins)]
