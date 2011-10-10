@@ -72,7 +72,7 @@ class ProxyingHandler(tornado.web.RequestHandler):
 		if not self.application.__requestsharer__.register(url, self) :
 			http_client = tornado.httpclient.AsyncHTTPClient()
 			h = lambda resp: self.application.__requestsharer__.respond(url, resp)
-			http_client.fetch(self.application.__requestsharer__.endpoint + url, h)
+			http_client.fetch(self.application.__requestsharer__.endpoint + url, h, request_timeout=120.0)
 
 class JSONHandler(tornado.web.RequestHandler):
 	@property
