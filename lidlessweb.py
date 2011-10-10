@@ -28,21 +28,24 @@ class RequestSharer() :
 
 	def respond(self, url, response) :
 		with self.rlock :
-			code = 200
-
 			if response.error :
 				print 'error retrieving %s' % url
-				if response.code :
-					code = response.code
+				code = response.code
 				body = response.body
 				headers = response.headers
 			else :
+				code = response.code
 				body = response.body
 				headers = response.headers
 			
 			for inb in self.rdict[url] :
 				try :
-					inb.set_status(code)
+					if isinstance(response.code, int) :
+						inb.set_status(response.code)
+					else :
+						# capacity issue?
+						inb.set_status(501)
+
 					for header in headers :
 						inb.set_header(header, headers[header])
 					inb.write(body)
