@@ -254,7 +254,7 @@ class Percept(threading.Thread) :
 						history = self.frames_ago(blob_motion, history)
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
-						print 'ratio busy: %0.3f' % self.ratio_busy
+						print '%s ratio busy: %0.3f' % (self.camname, self.ratio_busy)
 						#cv.SaveImage('cumulative.png', history)
 
 					# TODO fitful sleep that checks self.ok
