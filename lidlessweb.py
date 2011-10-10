@@ -29,11 +29,13 @@ class RequestSharer() :
 
 	def respond(self, url, response) :
 		with self.rlock :
+			err = False
 			if response.error :
 				print 'error retrieving %s' % url
 				code = response.code
 				body = response.body
 				headers = response.headers
+				err = True
 			else :
 				code = response.code
 				body = response.body
@@ -50,7 +52,12 @@ class RequestSharer() :
 
 					for header in headers :
 						inb.set_header(header, headers[header])
-					inb.write(body)
+					if body :
+						inb.write(body)
+					elif err :
+						# TODO handle this better, there are many errcodes
+						inb.write("Error proxying")
+					
 					inb.finish()
 				except :
 					print 'exception while trying to send proxy response for %s' % url
