@@ -68,7 +68,7 @@ class RequestSharer() :
 class ProxyingHandler(tornado.web.RequestHandler):
 	@tornado.web.asynchronous
 	def get(self, url) :
-		print '[proxyinghandler] GET %s' % url
+		print '[proxyinghandler] %s GET %s' % (self.request.remote_ip, url)
 		if not self.application.__requestsharer__.register(url, self) :
 			http_client = tornado.httpclient.AsyncHTTPClient()
 			h = lambda resp: self.application.__requestsharer__.respond(url, resp)
