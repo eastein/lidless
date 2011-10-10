@@ -1,6 +1,7 @@
 import sys
 import threading
 import traceback
+import httplib
 import tornado.web
 import tornado.ioloop
 import tornado.httpclient
@@ -40,11 +41,12 @@ class RequestSharer() :
 			
 			for inb in self.rdict[url] :
 				try :
-					if isinstance(response.code, int) :
+					if response.code in httplib.responses :
 						inb.set_status(response.code)
 					else :
+						print 'WARNING response.code = %s, sending 500' % str(response.code)
 						# capacity issue?
-						inb.set_status(501)
+						inb.set_status(500)
 
 					for header in headers :
 						inb.set_header(header, headers[header])
