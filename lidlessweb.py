@@ -1,6 +1,8 @@
+import re
 import sys
 import threading
 import traceback
+import random
 import httplib
 import tornado.web
 import tornado.ioloop
@@ -8,6 +10,43 @@ import tornado.httpclient
 import concurrent.futures as futures
 import ramirez.mcore.events
 import os.path
+
+CAM_MATCH = re.compile('^/api/([^/]+)/.*$')
+
+class EndpointRouter() :
+	def __init__(self) :
+		self.cam_role_map = {}
+		self.role_port_map = {}
+
+	def reg_camera(self, cam, role) :
+		self.cam_role_map[cam] = role
+
+	def reg_web(self, role, port) :
+		self.role_port_map[role] = port
+
+	@property
+	def valid(self) :
+		croles = set(self.cam_role_map.values())
+		wroles = set(self.role_port_map.keys())
+		return not bool(croles - wroles)
+
+	def route(self, uri) :
+		m = CAM_MATCH.match(uri)
+		if not m :
+			return self.endpoint()
+		else :
+			return self.endpoint(m.group(1)) 
+
+	def  endpoint(self, cam=None) :
+		return 'http://127.0.0.1:%d' % self._endpoint(cam)
+
+	def _endpoint(self, cam) :
+		if not cam :
+			ports = self.role_port_map.values()
+			random.shuffle(ports)
+			return ports[0]
+		else :
+			return self.role_port_map[self.cam_role_map[cam]]
 
 class RequestSharer() :
 	def __init__(self, endpoint) :
@@ -72,7 +111,10 @@ class ProxyingHandler(tornado.web.RequestHandler):
 		if not self.application.__requestsharer__.register(url, self) :
 			http_client = tornado.httpclient.AsyncHTTPClient()
 			h = lambda resp: self.application.__requestsharer__.respond(url, resp)
-			http_client.fetch(self.application.__requestsharer__.endpoint + url, h, request_timeout=120.0)
+			ep = self.application.__requestsharer__.endpoint
+			if isinstance(ep, EndpointRouter) :
+				ep = ep.route(url)
+			http_client.fetch(ep + url, h, request_timeout=120.0)
 
 class ProtoFuture(object) :
 	def __init__(self, fut, continuation) :

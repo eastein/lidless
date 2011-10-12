@@ -77,6 +77,8 @@ if __name__ == '__main__' :
 		usage()
 
 	disqualified = True
+	used_epr = False
+	er = lidlessweb.EndpointRouter()
 
 	# TODO regexes for all the setting types, people are crazy
 	for stanza in conf :
@@ -110,6 +112,7 @@ if __name__ == '__main__' :
 		disqualified &= roled(role, stanza, perc.history)
 
 		percepts[perc.camname] = perc
+		er.reg_camera(stanza['name'], stanza['role'])
 
 	for stanza in conf :
 		if stanza['type'] == 'irc' :
@@ -119,11 +122,27 @@ if __name__ == '__main__' :
 			disqualified &= roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :
 			all_in(stanza, ['port'])
+
+			# default proxy settings
 			stanza.setdefault('proxy_endpoint', None)
-			lweb = lidlessweb.LidlessWeb(percepts, port=stanza['port'], endpoint=stanza['proxy_endpoint'])
+			stanza.setdefault('proxy_mode', None)
+
+			ep = stanza['proxy_endpoint']
+
+			if stanza['proxy_mode'] == 'auto' :
+				ep = er
+				used_epr = True
+			elif stanza['proxy_endpoint'] is None and stanza['proxy_mode'] is None:
+				er.reg_web(stanza['role'], stanza['port'])
+
+			lweb = lidlessweb.LidlessWeb(percepts, port=stanza['port'], endpoint=ep)
 			t.add(lweb)
 			disqualified &= roled(role, stanza, lweb)
-	
+
+	if used_epr and not er.valid :
+		print "Error: proxy_mode: auto was used but not all cameras have a local non-proxy web host"
+		sys.exit(1)
+
 	if disqualified :
 		# this means that none of the stanzas applied here: give up, this can accomplish nothing.
 		print 'Error: role %s has no active stanzas, aborting.' % role
