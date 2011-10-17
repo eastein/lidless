@@ -7,6 +7,7 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 # Dependencies
 
 * zmstream (https://github.com/eastein/zmstream)
+* mediorc (https://github.com/eastein/mediorc)
 * ramirez (https://github.com/eastein/ramirez)
 * flot, as a git submodule.  To make this work, you must run 'git submodule init' / 'git submodule update'.
 * OpenCV with python support, 2.1 or 2.2 work.  2.3 may work, but has not been tested successfully.
@@ -15,17 +16,17 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 
 You'll want a ZoneMinder server for this to be useful for a wide variety of camera streams, or if you have a motion jpeg http streaming camera, you will probably be able to use it directly.
 
-<A name="toc1-17" title="Video Sources" />
+<A name="toc1-18" title="Video Sources" />
 # Video Sources
 
 Please see the README for the version of `zmstream` you are using to determine what cameras and video sources will be supported by your install.
 
-<A name="toc2-22" title="PTZ Cameras" />
+<A name="toc2-23" title="PTZ Cameras" />
 ## PTZ Cameras
 
 Be aware that if you are using a pan/tilt/zoom camera, lidless's motion data will produce bad data around the periods when you move the camera.  The algorithms for motion detection depend on the camera's view being of the same field of view at all times.
 
-<A name="toc1-27" title="HOWTO" />
+<A name="toc1-28" title="HOWTO" />
 # HOWTO
 
 You'll want to write a config file in JSON.
@@ -54,12 +55,12 @@ The username and password options work with HTTP basic authentication or ZoneMin
 
 If you are having web interface or API performance issues, it's suggested to add a second web stanza with the `proxy_endpoint` set to the base url of the other web stanza; in the above example such a `proxy_endpoint` setting would be `"http://localhost:8000"`.
 
-<A name="toc1-56" title="API" />
+<A name="toc1-57" title="API" />
 # API
 
 See API document for details of the API.
 
-<A name="toc1-61" title="See Also" />
+<A name="toc1-62" title="See Also" />
 # See Also
 
 See CREDITS for props to people who helped out.

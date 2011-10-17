@@ -5,6 +5,7 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 # Dependencies
 
 * zmstream (https://github.com/eastein/zmstream)
+* mediorc (https://github.com/eastein/mediorc)
 * ramirez (https://github.com/eastein/ramirez)
 * flot, as a git submodule.  To make this work, you must run 'git submodule init' / 'git submodule update'.
 * OpenCV with python support, 2.1 or 2.2 work.  2.3 may work, but has not been tested successfully.
