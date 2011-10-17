@@ -2,13 +2,12 @@ import time
 import threading
 import irclib
 
-class LidlessIRC(irclib.SimpleIRCClient) :
+class IRC(irclib.SimpleIRCClient) :
 	JOIN_TIMEOUT = 120
 	PING_TIMEOUT = 120
 	PING_FREQUENCY = 60
 
-	def __init__(self, server, nick, chan, percepts) :
-		self.percepts = percepts
+	def __init__(self, server, nick, chan) :
 		self.dead = False
 		self._ping_s = None
 		self._ping_r = None
@@ -28,16 +27,16 @@ class LidlessIRC(irclib.SimpleIRCClient) :
 		if self._ping_s is None or self._ping_r is None :
 			return
 
-		if time.time() > self._ping_s + LidlessIRC.PING_FREQUENCY :
+		if time.time() > self._ping_s + IRC.PING_FREQUENCY :
 			self.connection.ping(self.connection.real_server_name)
 			self._ping_s = time.time()
 
 	@property
 	def pinged_out(self) :
 		if self._ping_s is None or self._ping_r is None :
-			return time.time() - self._create_t > LidlessIRC.JOIN_TIMEOUT
+			return time.time() - self._create_t > IRC.JOIN_TIMEOUT
 
-		return time.time() - self._ping_r > LidlessIRC.PING_TIMEOUT
+		return time.time() - self._ping_r > IRC.PING_TIMEOUT
 
 	def on_pong(self, c, e) :
 		self._ping_r = time.time()
@@ -86,11 +85,7 @@ class LidlessIRC(irclib.SimpleIRCClient) :
 class IRCThread(threading.Thread) :
 	RETRY_SEC = 10
 
-	def __init__(self, server, nick, chan, perc) :
-		self.server = server
-		self.nick = nick
-		self.chan = chan
-		self.perc = perc
+	def __init__(self) :
 		self.ok = True
 		threading.Thread.__init__(self)
 
@@ -109,7 +104,7 @@ class IRCThread(threading.Thread) :
 	def run(self) :
 		while self.ok :
 			print 'creating new irc connection'
-			self.client = LidlessIRC(self.server, self.nick, self.chan, self.perc)
+			self.client = self.bot_create()
 			try :
 				self.client.conn()
 			except irclib.ServerConnectionError :
@@ -123,3 +118,13 @@ class IRCThread(threading.Thread) :
 			if self.ok :
 				print 'shutting down irc connection before reconnect'
 				self.client.clean_shutdown()
+
+class LidlessBot(IRC) :
+	def __init__(self, server, nick, chan, percepts) :
+		self.percepts = percepts
+		IRC.__init__(self, server, nick, chan)
+
+class LidlessBotThread(IRCThread) :
+	def __init__(self, server, nick, chan, percepts) :
+		self.bot_create = lambda: LidlessBot(server, nick, chan, percepts)
+		IRCThread.__init__(self)

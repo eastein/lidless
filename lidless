@@ -117,7 +117,7 @@ if __name__ == '__main__' :
 	for stanza in conf :
 		if stanza['type'] == 'irc' :
 			all_in(stanza, ['server', 'nick', 'channel'])
-			irct = lidlessirc.IRCThread(stanza['server'], stanza['nick'], stanza['channel'], percepts)
+			irct = lidlessirc.LidlessBotThread(stanza['server'], stanza['nick'], stanza['channel'], percepts)
 			t.add(irct)
 			disqualified &= roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :
