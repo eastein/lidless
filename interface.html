@@ -89,7 +89,7 @@ function start_history() {
 	for (var i in cams) {
 		ajax_history(cams[i]);
 	}
-	history_timeout = setTimeout(start_history, period / 40);
+	history_timeout = setTimeout(start_history, period / 30);
 }
 
 function set_history(per) {

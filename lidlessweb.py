@@ -12,6 +12,8 @@ import ramirez.mcore.events
 import os.path
 
 CAM_MATCH = re.compile('^/api/([^/]+)/.*$')
+DEFAULT_RANGE_MATCH = re.compile('^/api/[^/]+/(ticks|history)$')
+RANGE_MATCH = re.compile('^/api/[^/]+/history/([0-9]+)$')
 
 class EndpointRouter() :
 	def __init__(self) :
@@ -48,17 +50,60 @@ class EndpointRouter() :
 		else :
 			return self.role_port_map[self.cam_role_map[cam]]
 
-class RequestSharer() :
+class RequestDepot() :
 	def __init__(self, endpoint) :
 		self.endpoint = endpoint
 		self.rdict = dict()
-		self.rlock = threading.Lock()
+		self.cache = dict()
+		self.rplock = threading.Lock()
+
+	def expiry(self, uri) :
+		fraction = 30
+		dm = DEFAULT_RANGE_MATCH.match(uri)
+		if dm :
+			return 3600 * 1000 / fraction
+		m = RANGE_MATCH.match(uri)
+		if m :
+			return long(m.group(1)) / fraction
+
+
+	def cache_set(self, url, resp) :
+		with self.rplock :
+			# TODO implement cache limiting and scheduled sweeping to clean up cache DDOS
+			ts = ramirez.mcore.events.tick()
+
+			if self.expiry(url) is None :
+				return
+
+			self.cache[url] = (ts, resp)
+
+	def cache_get(self, url) :
+		with self.rplock :
+			now = ramirez.mcore.events.tick()
+			expiry = self.expiry(url)
+
+			if expiry is None :
+				return None
+
+			if url not in self.cache :
+				return None
+			
+			ts, resp = self.cache[url]
+			if ts >= now - expiry :
+				# everything's good. we have this!
+				return resp
+			else :
+				# where have all the caches gone?
+				# long time passing
+				# where have all the caches gone?
+				# time has expired them, every one
+				del self.cache[url]
 
 	"""
 	Returns whether a request is already underway or whether one must be started
 	"""
 	def register(self, url, inbound) :
-		with self.rlock :
+		with self.rplock :
 			if url in self.rdict :
 				self.rdict[url].append(inbound)
 				return True
@@ -66,8 +111,12 @@ class RequestSharer() :
 				self.rdict[url] = [inbound]
 				return False
 
-	def respond(self, url, response) :
-		with self.rlock :
+	def respond(self, url, response, cachefirst) :
+		# cache if we are told to and the response is not an error
+		if cachefirst and not response.error :
+			self.cache_set(url, response)
+
+		with self.rplock :
 			err = False
 			if response.error :
 				print 'error retrieving %s' % url
@@ -104,17 +153,24 @@ class RequestSharer() :
 
 			del self.rdict[url]
 
-class ProxyingHandler(tornado.web.RequestHandler):
+class ProxyCachingHandler(tornado.web.RequestHandler):
 	@tornado.web.asynchronous
 	def get(self, url) :
-		print '[proxyinghandler] %s GET %s' % (self.request.remote_ip, url)
-		if not self.application.__requestsharer__.register(url, self) :
-			http_client = tornado.httpclient.AsyncHTTPClient()
-			h = lambda resp: self.application.__requestsharer__.respond(url, resp)
-			ep = self.application.__requestsharer__.endpoint
-			if isinstance(ep, EndpointRouter) :
-				ep = ep.route(url)
-			http_client.fetch(ep + url, h, request_timeout=120.0)
+		if self.application.__requestdepot__.register(url, self) :
+			print '[proxyinghandler] %s QUEUE GET %s' % (self.request.remote_ip, url)
+		else :
+			cached = self.application.__requestdepot__.cache_get(url)
+			if cached :
+				print '[proxyinghandler] %s CACHE GET %s' % (self.request.remote_ip, url)
+				self.application.__requestdepot__.respond(url, cached, False)
+			else :
+				print '[proxyinghandler] %s BEGIN GET %s' % (self.request.remote_ip, url)
+				http_client = tornado.httpclient.AsyncHTTPClient()
+				h = lambda resp: self.application.__requestdepot__.respond(url, resp, True)
+				ep = self.application.__requestdepot__.endpoint
+				if isinstance(ep, EndpointRouter) :
+					ep = ep.route(url)
+				http_client.fetch(ep + url, h, request_timeout=120.0)
 
 class ProtoFuture(object) :
 	def __init__(self, fut, continuation) :
@@ -330,10 +386,10 @@ class LidlessWeb(threading.Thread) :
 			self.application.__interface__ = open('interface.html').read()
 		else :
 			self.application = tornado.web.Application([
-				(r"(/.*)$", ProxyingHandler),
+				(r"(/.*)$", ProxyCachingHandler),
 			])
 
-			self.application.__requestsharer__ = RequestSharer(self.endpoint)
+			self.application.__requestdepot__ = RequestDepot(self.endpoint)
 
 		# TODO catch bind error here!
 		self.application.listen(self.port)
