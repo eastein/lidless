@@ -11,7 +11,7 @@ import concurrent.futures as futures
 import ramirez.mcore.events
 import os.path
 
-CAM_MATCH = re.compile('^/api/([^/]+)/.*$')
+CAM_MATCH = re.compile('^/api/([^/]+)(|/.*)$')
 DEFAULT_RANGE_MATCH = re.compile('^/api/[^/]+/(ticks|history)$')
 RANGE_MATCH = re.compile('^/api/[^/]+/history/([0-9]+)$')
 
@@ -207,6 +207,9 @@ class JSONHandler(tornado.web.RequestHandler):
 
 	@tornado.web.asynchronous
 	def get(self, *a):
+		cn = self.__class__.__name__
+		cn += ' ' * (14 - len(cn))
+		print '[json/%s] %s GET args %s' % (cn, self.request.remote_ip, str(a))
 		result = self.process_request(*a)
 		if isinstance(result, (futures.Future, ProtoFuture)) :
 			result.add_done_callback(self.handle_response)

@@ -1,5 +1,6 @@
 import zmstream
 import cv
+import zmq
 import math
 import pprint
 import os
@@ -7,6 +8,7 @@ import sys
 import tempfile
 import threading
 import time
+import json
 
 SOCKET_RETRY_SEC = 10
 NO_FRAME_THR = 10
@@ -17,12 +19,14 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, camname, url, auth=None, zm_auth_hash_secret=None) :
+	def __init__(self, camname, url, auth=None, zm_auth_hash_secret=None, zmq_url=None) :
 		self.camname = camname
 		self.url = url
 		self.auth = auth
 		self.zm_auth_hash_secret = zm_auth_hash_secret
+		self.zmq_url = zmq_url
 		self.ok = True
+		self.active = True
 		self.frame_time = None
 		self.ratio_busy = None
 		threading.Thread.__init__(self)
@@ -182,6 +186,12 @@ class Percept(threading.Thread) :
 					c += 1
 		return c / float(width * height)
 
+	def deactivate(self) :
+		if self.zmq_url is not None :
+			self.active = False
+		else :
+			self.stop()
+
 	def stop(self) :
 		self.ok = False
 		if hasattr(self, 'streamer') :
@@ -210,7 +220,7 @@ class Percept(threading.Thread) :
 				return None
 
 			return self.ratio_busy
-		else :
+ 		elif not self.active : #FIXME database based sharing is unreliable
 			if hasattr(self, 'history') :
 				b = self.history.busy
 				if b is not None :
@@ -223,7 +233,33 @@ class Percept(threading.Thread) :
 				break
 			time.sleep(0.1)
 
+	def run_zmq(self) :
+		c = zmq.Context(1)
+		s = c.socket(zmq.SUB)
+		s.connect(self.zmq_url)
+		s.setsockopt (zmq.SUBSCRIBE, "")
+
+		while self.ok :
+			r, w, x = zmq.core.poll.select([s], [], [], 0.1)
+			if r :
+				msg = s.recv()
+
+				msg = json.loads(msg)
+				if msg['camname'] == self.camname :
+					self.frame_time = msg['frame_time']
+					self.ratio_busy = msg['ratio_busy']
+
 	def run(self) :
+		zmq_socket = None
+		if self.zmq_url is not None :
+			if self.active :
+				c = zmq.Context(1)
+				zmq_socket = c.socket(zmq.PUB)
+				zmq_socket.bind(self.zmq_url)
+			else :
+				self.run_zmq()
+				return
+
 		edge_bin = {}
 		history = None
 
@@ -254,6 +290,13 @@ class Percept(threading.Thread) :
 						history = self.frames_ago(blob_motion, history)
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
+						if zmq_socket is not None :
+							msg = {
+								'camname' : self.camname,
+								'ratio_busy' : self.ratio_busy,
+								'frame_time' : ts
+							}
+							zmq_socket.send(json.dumps(msg))
 						print '%s ratio busy: %0.3f' % (self.camname, self.ratio_busy)
 						#cv.SaveImage('cumulative.png', history)
 

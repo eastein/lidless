@@ -39,7 +39,6 @@ class ThreadManager(object) :
 
 def usage() :
 	# TODO take a 'what you did wrong' string and display it with the usage
-	raise RuntimeError
 	print 'usage: lidless <configfile> [role]\n\n\tconfigfile should be json\n\trole is default, allows selecting certain roles for processing in different processes.'
 	sys.exit(1)
 
@@ -48,9 +47,12 @@ def all_in(stanza, keys) :
 		if k not in stanza :
 			usage()
 
-def roled(role, stanza, thr) :
+def roled(role, stanza, thr, deactivate=False) :
 	if stanza['role'] != role :
-		thr.stop()
+		if deactivate :
+			thr.deactivate()
+		else :
+			thr.stop()
 		return True
 	return False
 
@@ -96,19 +98,22 @@ if __name__ == '__main__' :
 			continue
 
 		auth = None
-		zm_auth_hash_secret = None
+		zm_ahs = None
+		zmq_url = None
 		if 'username' in stanza or 'password' in stanza :
 			all_in(stanza, ['username', 'password'])
 			auth = stanza['username'], stanza['password']
 			if 'zm_auth_hash_secret' in stanza :
-				zm_auth_hash_secret = stanza['zm_auth_hash_secret']
-		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_auth_hash_secret)
+				zm_ahs = stanza['zm_auth_hash_secret']
+			if 'zmq_url' in stanza :
+				zmq_url = stanza['zmq_url']
+		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url)
 		t.add(perc)
 
 		perc.history = historical.History(perc.camname, perc)
 		t.add(perc.history)
 
-		disqualified &= roled(role, stanza, perc)
+		disqualified &= roled(role, stanza, perc, deactivate=True)
 		disqualified &= roled(role, stanza, perc.history)
 
 		percepts[perc.camname] = perc
