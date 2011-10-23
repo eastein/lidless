@@ -12,6 +12,7 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 * OpenCV with python support, 2.1 or 2.2 work.  2.3 may work, but has not been tested successfully.
 * CPython 2.6 or 2.7 (other pythons may work as well)
 * python-irclib
+* tornado (http://www.tornadoweb.org/)
 
 You'll want a ZoneMinder server for this to be useful for a wide variety of camera streams, or if you have a motion jpeg http streaming camera, you will probably be able to use it directly.
 
