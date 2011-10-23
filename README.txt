@@ -8,7 +8,7 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 * mediorc (https://github.com/eastein/mediorc)
 * ramirez (https://github.com/eastein/ramirez)
 * flot, as a git submodule.  To make this work, you must run 'git submodule init' / 'git submodule update'.
-* pyzmq (http://www.zeromq.org/bindings:python)
+* pyzmq (http://www.zeromq.org/bindings:python) if you use the zmq_url setting anywhere
 * OpenCV with python support, 2.1 or 2.2 work.  2.3 may work, but has not been tested successfully.
 * CPython 2.6 or 2.7 (other pythons may work as well)
 * python-irclib
@@ -65,6 +65,22 @@ If you are having web interface or API performance issues, it's suggested to add
     }
 
 This proxying web instance has some special settings in play.  It is using the webserver role, which means it will not run in the `default` process: you must run another process with a role argument of `webserver` in order to execute it, using the same configuration file as the other processes.  It depends on every other process/role that services `camera` stanzas to also include a non-proxied `web` instance to do the actual data access.  The usage of the `proxy_mode = auto` setting will direct the proxy to load balance non-camera-specific requests and direct the camera-specific requests to the other `web` instance running on the local machine that is in the same `role` as the `camera` that the request is in reference to.  However, `proxy_mode = auto` does not currently work except over localhost.  If your worker processes are on a different machine than the proxy process, you will need to use `proxy_endpoint = http://ip:port` instead, and `proxy_mode = auto` isn't smart enough to automatically proxy between mid-layer proxies, so at this time proxying is not a solution for multi-machine scalability.
+
+## Interchange in a Multi-role System
+
+If not all of the stanzas have the same role, sometimes information is required in one stanza that is generated in a different stanza; for instance, current ratio information.  There are 3 ways that this information can be acquired: direct memory access (if the stanza needing the information is in the same python process), ZeroMQ PUB/SUB (this should work inter-machine), HTTP proxy.
+
+### Direct Access
+
+This one is the simplest; if the stanza (either `irc` or `web` that's doing serving and has no proxy settings configured) is in the same role, it will just access the data from the `camera` via the Python object that represents the camera processing work.
+
+### ZeroMQ PUB/SUB
+
+Setting the `zmq_url` parameter on a `camera` will set up a ZMQ PUB/SUB socket set internal to the camera that allows the inactive instances of the `camera` in the out-of-`role` processes to receive realtime updates on the current ratio.  This connects with the Direct Access system at that time such that other stanzas will just directly access the latest PUB/SUB interchanged ratio state.
+
+### HTTP Proxy
+
+Using either `proxy_endpoint = ` or `proxy_mode = auto`, one `web` stanza can directly request the ratio data for API serving from a different `web` stanza that uses one of the other 2 methods of access.
 
 # API
 

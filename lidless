@@ -107,6 +107,7 @@ if __name__ == '__main__' :
 				zm_ahs = stanza['zm_auth_hash_secret']
 			if 'zmq_url' in stanza :
 				zmq_url = stanza['zmq_url']
+				import zmq # just to error fast, rather than slow; before any threads start.
 		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url)
 		t.add(perc)
 

@@ -1,6 +1,5 @@
 import zmstream
 import cv
-import zmq
 import math
 import pprint
 import os
@@ -220,11 +219,6 @@ class Percept(threading.Thread) :
 				return None
 
 			return self.ratio_busy
- 		elif not self.active : #FIXME database based sharing is unreliable
-			if hasattr(self, 'history') :
-				b = self.history.busy
-				if b is not None :
-					return b / 100.0
 
 	# move to a base
 	def checkedwait(self, secs) :
@@ -234,6 +228,7 @@ class Percept(threading.Thread) :
 			time.sleep(0.1)
 
 	def run_zmq(self) :
+		import zmq
 		c = zmq.Context(1)
 		s = c.socket(zmq.SUB)
 		s.connect(self.zmq_url)
@@ -253,6 +248,7 @@ class Percept(threading.Thread) :
 		zmq_socket = None
 		if self.zmq_url is not None :
 			if self.active :
+				import zmq
 				c = zmq.Context(1)
 				zmq_socket = c.socket(zmq.PUB)
 				zmq_socket.bind(self.zmq_url)
