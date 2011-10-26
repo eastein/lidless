@@ -254,7 +254,7 @@ class Percept(threading.Thread) :
 	@property
 	def live_ratio(self) :
 		if self.zmq_url is not None :
-			return self.active
+			return True
 		return self.ok
 
 	def run(self) :
