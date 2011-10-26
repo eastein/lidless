@@ -74,6 +74,7 @@ if __name__ == '__main__' :
 
 	t = ThreadManager()
 	percepts = {}
+	alerts = []
 
 	if not isinstance(conf, list) :
 		usage()
@@ -121,9 +122,39 @@ if __name__ == '__main__' :
 		er.reg_camera(stanza['name'], stanza['role'])
 
 	for stanza in conf :
+		if stanza['type'] == 'alert' :
+			all_in(stanza, ['mode', 'level', 'message', 'camera', 'throttle'])
+			if stanza['camera'] not in percepts :
+				usage()
+
+			perc = percepts[stanza['camera']]
+			
+			mode = stanza['mode']
+			if mode not in  ['instant', 'sustain'] :
+				usage()
+
+			args = {}
+			if mode == 'sustain' :
+				if 'duration' not in stanza :
+					usage()
+				else :
+					args['duration'] = stanza['duration']
+
+			alert = percept.Alert(perc, stanza['mode'], stanza['level'], stanza['message'], stanza['throttle'], **args)
+
+			dq = roled(role, stanza, alert)
+
+			disqualified &= dq
+
+			if not dq and not perc.live_ratio :
+				usage()
+
+			alerts.append(alert)
+
+	for stanza in conf :
 		if stanza['type'] == 'irc' :
 			all_in(stanza, ['server', 'nick', 'channel'])
-			irct = lidlessirc.LidlessBotThread(stanza['server'], stanza['nick'], stanza['channel'], percepts)
+			irct = lidlessirc.LidlessBotThread(stanza['server'], stanza['nick'], stanza['channel'], percepts, alerts)
 			t.add(irct)
 			disqualified &= roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :

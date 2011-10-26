@@ -1,9 +1,11 @@
 import time
 import mediorc
+import Queue
 
 class LidlessBot(mediorc.IRC) :
-	def __init__(self, server, nick, chan, percepts) :
+	def __init__(self, server, nick, chan, percepts, alerts) :
 		self.percepts = percepts
+		self.alerts = alerts
 		mediorc.IRC.__init__(self, server, nick, chan)
 
 	def on_pubmsg(self, c, e) :
@@ -28,7 +30,15 @@ class LidlessBot(mediorc.IRC) :
 			
 			self.connection.privmsg(chan, msg)
 
+	def do_work(self) :
+		for alert in self.alerts :
+			try :
+				alert = alert.q.get(timeout=0)
+				self.connection.privmsg(self._chan, alert)
+			except Queue.Empty :
+				pass
+
 class LidlessBotThread(mediorc.IRCThread) :
-	def __init__(self, server, nick, chan, percepts) :
-		self.bot_create = lambda: LidlessBot(server, nick, chan, percepts)
+	def __init__(self, server, nick, chan, percepts, alerts) :
+		self.bot_create = lambda: LidlessBot(server, nick, chan, percepts, alerts)
 		mediorc.IRCThread.__init__(self)

@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import json
+import Queue
 
 SOCKET_RETRY_SEC = 10
 NO_FRAME_THR = 10
@@ -28,6 +29,7 @@ class Percept(threading.Thread) :
 		self.active = True
 		self.frame_time = None
 		self.ratio_busy = None
+		self.alerts = []
 		threading.Thread.__init__(self)
 
 	def image_jpegstr(self, jpeg_str) :
@@ -220,6 +222,10 @@ class Percept(threading.Thread) :
 
 			return self.ratio_busy
 
+	def ratio_reaction(self) :
+		for alert in self.alerts :
+			alert.evaluate()
+
 	# move to a base
 	def checkedwait(self, secs) :
 		for i in range(secs * 10) :
@@ -243,6 +249,13 @@ class Percept(threading.Thread) :
 				if msg['camname'] == self.camname :
 					self.frame_time = msg['frame_time']
 					self.ratio_busy = msg['ratio_busy']
+					self.ratio_reaction()
+
+	@property
+	def live_ratio(self) :
+		if self.zmq_url is not None :
+			return self.active
+		return self.ok
 
 	def run(self) :
 		zmq_socket = None
@@ -266,6 +279,7 @@ class Percept(threading.Thread) :
 					if not self.ok :
 						return
 
+					# TODO stop doing frame_time early when we may fail in this loop? grep all code
 					self.frame_time = ts
 
 					img = self.image_jpegstr(i)
@@ -293,7 +307,8 @@ class Percept(threading.Thread) :
 								'frame_time' : ts
 							}
 							zmq_socket.send(json.dumps(msg))
-						print '%s ratio busy: %0.3f' % (self.camname, self.ratio_busy)
+						print 'ratio busy %0.3f: %s' % (self.ratio_busy, self.camname)
+						self.ratio_reaction()
 						#cv.SaveImage('cumulative.png', history)
 
 					# TODO fitful sleep that checks self.ok
@@ -304,3 +319,59 @@ class Percept(threading.Thread) :
 			except zmstream.SocketError :
 				print 'socket error, re-acquiring in %d.' % SOCKET_RETRY_SEC
 				self.checkedwait(SOCKET_RETRY_SEC)
+
+class Alert(object) :
+	def __init__(self, p, mode, level, message, throttle, duration=None) :
+		self.ok = True
+		self.percept = p
+		self.percept.alerts.append(self)
+		self.mode = mode
+		self.level = level
+		self.message = message
+		self.throttle = throttle
+		self.duration = duration
+
+		# outbound alerts state
+		self.announce_time = 0.0
+		self.q = Queue.Queue()
+
+		# instant mode state
+		self.active = False
+
+		# sustained mode state
+		self.sus_start = None
+
+	def stop(self) :
+		self.ok = False
+
+	def evaluate(self) :
+		if self.ok :		
+			ratio = self.percept.busy
+
+			new_active = ratio is not None and round(ratio * 100) > self.level
+
+			if self.mode == 'instant' :
+				old_active = self.active
+				self.active = new_active
+			elif self.mode == 'sustain' :
+				self.active = new_active
+
+				if self.active :
+					if self.sus_start is None :
+						self.sus_start = time.time()
+				else :
+					self.sus_start = None
+
+			# no matter what you just decided to say, shut up if you're talking too much
+			if time.time() < self.announce_time + self.throttle :
+				return
+
+			alerted = False
+			if self.mode == 'instant' :
+				alerted = self.active and not old_active
+			elif self.mode == 'sustain' :
+				alerted = self.sus_start is not None and self.sus_start < time.time() - self.duration
+
+			if alerted :
+				self.announce_time = time.time()
+				self.q.put(self.message)
