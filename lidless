@@ -3,12 +3,12 @@
 import sys
 import time
 import threading
-
 import json
+
+import zmstream
 
 import percept
 import historical
-
 import lidlessweb
 import lidlessirc
 
@@ -109,7 +109,14 @@ if __name__ == '__main__' :
 			if 'zmq_url' in stanza :
 				zmq_url = stanza['zmq_url']
 				import zmq # just to error fast, rather than slow; before any threads start.
-		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url)
+		mode = zmstream.Mode.MJPEG
+		if 'mode' in stanza :
+			mk = stanza['mode'].upper()
+			if not hasattr(zmstream.Mode, mk) :
+				usage()
+			mode = getattr(zmstream.Mode, mk)
+		
+		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url, mode=mode)
 		t.add(perc)
 
 		perc.history = historical.History(perc.camname, perc)

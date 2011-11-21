@@ -8,11 +8,14 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 * mediorc (https://github.com/eastein/mediorc)
 * ramirez (https://github.com/eastein/ramirez)
 * flot, as a git submodule.  To make this work, you must run 'git submodule init' / 'git submodule update'.
-* pyzmq (http://www.zeromq.org/bindings:python) if you use the `zmq_url` setting anywhere
+* pyzmq (http://www.zeromq.org/bindings:python) if you use the `zmq_url` setting anywhere.
+* pyffmpeg (http://code.google.com/p/pyffmpeg/) if you use the `use_ffmpeg` setting anywhere.
 * OpenCV with python support, 2.1 or 2.2 work.  2.3 may work, but has not been tested successfully.
 * CPython 2.6 or 2.7 (other pythons may work as well)
 * python-irclib
 * tornado (http://www.tornadoweb.org/)
+
+Anything under https://github.com/eastein should be pulled/updated from github at the same time; from time to time, I change the way modules and their users work in fundamental ways.
 
 You'll want a ZoneMinder server for this to be useful for a wide variety of camera streams, or if you have a motion jpeg http streaming camera, you will probably be able to use it directly.
 
@@ -49,6 +52,17 @@ Here is an example:
     }]
 
 The username and password options work with HTTP basic authentication or ZoneMinder's time based authentication session at this time.  They are optional.  HTTPS does not work for camera sources.  If you want to go through ZoneMinder, the URL must end with auth= (the GET parameter for auth must be at the end), the `zm_auth_hash_secret` parameter must be added into the camera JSON stanza, and the `username`/`password` should be a valid user in the ZoneMinder instance.
+
+## FFMPEG
+
+*WARNING: EXPERIMENTAL*
+
+If you have access to a stream that ffmpeg can open and does not require authentication you can add the setting `mode = ffmpeg` to a `camera` stanza.  Doing so will use pyffmpeg to input the stream.  This is experimental and does not work very well yet, if at all.  Use at your own risk (even more so than the rest of this application, which is also at your own risk of course).
+
+### Caveats
+
+* pyffmpeg segfaults if you point it at a motion-jpeg stream that requires authentication, at the very least. I don't know what else it crashes on or the origin of this crash.
+* if your CPU can't keep up, non-key frames may end up skipped and cause the video picture to get corrupted; you have probably seen this running HD video on an old computer.  This is easy to discount when watching video with your eyes, but less easy for *lidless* to discard and account for.  There may be a way to work around this.  I expect that these scenarios will result in falsely high busyness information or potentially falsely low busyness information.
 
 ## Roles
 

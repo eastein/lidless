@@ -19,12 +19,13 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, camname, url, auth=None, zm_auth_hash_secret=None, zmq_url=None) :
+	def __init__(self, camname, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG) :
 		self.camname = camname
 		self.url = url
 		self.auth = auth
 		self.zm_auth_hash_secret = zm_auth_hash_secret
 		self.zmq_url = zmq_url
+		self.mode = mode
 		self.ok = True
 		self.active = True
 		self.frame_time = None
@@ -32,17 +33,10 @@ class Percept(threading.Thread) :
 		self.alerts = []
 		threading.Thread.__init__(self)
 
-	def image_jpegstr(self, jpeg_str) :
-		# this isn't great but OpenCV's a bit of a jerk about loading images
-		fn = tempfile.mktemp('.jpg')
-		try :
-			h = open(fn, 'w')
-			h.write(jpeg_str)
-			h.close()
-
-			return cv.LoadImage(fn)
-		finally :
-			os.unlink(fn)
+	def image_pil(self, pil_image) :
+		cv_im = cv.CreateImageHeader(pil_image.size, cv.IPL_DEPTH_8U, 3)
+		cv.SetData(cv_im, pil_image.tostring())
+		return cv_im
 
 	def filter_edges(self, img) :
 		sz = cv.GetSize(img)
@@ -207,7 +201,7 @@ class Percept(threading.Thread) :
 		if hasattr(self, 'streamer') :
 			self.streamer.stop()
 			self.streamer.join()
-		self.streamer = zmstream.ZMThrottle(1, self.url, auth=self.auth, zm_auth_hash_secret=self.zm_auth_hash_secret)
+		self.streamer = zmstream.ZMThrottle(1, self.url, auth=self.auth, zm_auth_hash_secret=self.zm_auth_hash_secret, mode=self.mode)
 		self.streamer.start()
 
 	@property
@@ -282,7 +276,7 @@ class Percept(threading.Thread) :
 					# TODO stop doing frame_time early when we may fail in this loop? grep all code
 					self.frame_time = ts
 
-					img = self.image_jpegstr(i)
+					img = self.image_pil(i)
 
 					filtered = self.filter_edges(img)
 					#cv.SaveImage('edges.png', filtered)
