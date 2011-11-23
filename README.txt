@@ -91,7 +91,7 @@ This one is the simplest; if the stanza (either `irc` or `web` that's doing serv
 
 ### ZeroMQ PUB/SUB
 
-Setting the `zmq_url` parameter on a `camera` will set up a ZMQ PUB/SUB socket set internal to the camera that allows the inactive instances of the `camera` in the out-of-`role` processes to receive realtime updates on the current ratio.  This connects with the Direct Access system at that time such that other stanzas will just directly access the latest PUB/SUB interchanged ratio state.
+Setting the `zmq_url` parameter on a `camera` will set up a ZMQ PUB/SUB socket set internal to the camera that allows the inactive instances of the `camera` in the out-of-`role` processes to receive realtime updates on the current ratio.  This connects with the Direct Access system at that time such that other stanzas will just directly access the latest PUB/SUB interchanged ratio state.  For details of the messages sent over the `zmq_url`, see API.txt.
 
 ### HTTP Proxy
 
