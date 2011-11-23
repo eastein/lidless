@@ -1,5 +1,5 @@
-<A name="toc1-0" title="lidless API" />
-# lidless API
+<A name="toc1-0" title="lidless Web API" />
+# lidless Web API
 
 <A name="toc2-3" title="Basics" />
 ## Basics
@@ -24,3 +24,17 @@ All requests shall be GET.  No authentication shall be required.
 * /api/camname/ticks: get 1 hour of ratio history in raw form.  To be documented.
 * /api/camname/history: get 1 hour of ratio history in binned average form.  To be documented.
 * /api/camname/history/range_ms: get range_ms of ratio history in binned average form.  To be documented.
+
+<A name="toc1-27" title="lidless ZeroMQ API" />
+# lidless ZeroMQ API
+
+Cameras that include a `zmq_url` parameter will engage their ZeroMQ API mode.  JSON objects will be sent over the socket after every frame that results in busyness measurements being recorded.
+
+    {
+      "camname" : "warehouse",
+      "ratio_busy" : 0.0087316176470588237,
+      "frame_time" : 1322038719.3862939,
+      "busy_cells" : [[True, False, False, ...], [True, ...], ...]
+    }
+
+The above example is for a camera called warehouse that's 0.87% busy.  `frame_time` is a UTC unix timestamp with sub-second precision that indicates the time of retrieval of the most recent image frame that the data is based on.  The Indexing in the `busy_cells` is object["busy_cells"][x][y].  If the value is True, it means that cell was busy at the time; do not expect ratio_busy to match up with the total ratio of True/False counts as the ratio_busy measure is based on some history as well.

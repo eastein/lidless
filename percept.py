@@ -125,7 +125,7 @@ class Percept(threading.Thread) :
 		img_out = cv.CreateMat(width, height, depth)
 		return width, height, img_out
 
-	def filter_for_blobs(self, img) :
+	def determine_busyness(self, img) :
 		width, height, img_out = self.create_image_matching_size(img, cv.CV_8U)
 
 		THRESHOLD = 80
@@ -151,7 +151,7 @@ class Percept(threading.Thread) :
 
 		return img_out
 
-	def frames_ago(self, motionframe, history) :
+	def record_frame(self, motionframe, history) :
 		MAX = 256 - 1
 
 		if history is None :
@@ -171,6 +171,22 @@ class Percept(threading.Thread) :
 						history[x,y] += 1
 
 		return history
+
+	def busyness_array(self, motionframe) :
+		width, height = self.get_wh(motionframe)
+
+		r = list()
+
+		for x in range(width) :
+			col = list()
+			r.append(col)
+			for y in range(height) :
+				if motionframe[x,y] > 0 :
+					col.append(True)
+				else :
+					col.append(False)
+
+		return r
 
 	def ratio_lte_thr(self, img, thr) :
 		width, height = self.get_wh(img)
@@ -288,17 +304,18 @@ class Percept(threading.Thread) :
 
 					motion_image = self.bins_to_img(diff)
 					if motion_image :
-						blob_motion = self.filter_for_blobs(motion_image)
-						#cv.SaveImage('motion.png', blob_motion)
+						motion_buffer = self.determine_busyness(motion_image)
+						#cv.SaveImage('motion.png', motion_buffer)
 
-						history = self.frames_ago(blob_motion, history)
+						history = self.record_frame(motion_buffer, history)
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
 						if zmq_socket is not None :
 							msg = {
 								'camname' : self.camname,
 								'ratio_busy' : self.ratio_busy,
-								'frame_time' : ts
+								'frame_time' : ts,
+								'busy_cells' : self.busyness_array(motion_buffer)
 							}
 							zmq_socket.send(json.dumps(msg))
 						print 'ratio busy %0.3f: %s' % (self.ratio_busy, self.camname)
