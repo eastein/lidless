@@ -238,7 +238,7 @@ class Percept(threading.Thread) :
 
 	# move to a base
 	def checkedwait(self, secs) :
-		for i in range(secs * 10) :
+		for i in range(int(secs * 10)):
 			if not self.ok :
 				break
 			time.sleep(0.1)
@@ -322,9 +322,8 @@ class Percept(threading.Thread) :
 						self.ratio_reaction()
 						#cv.SaveImage('cumulative.png', history)
 
-					# TODO fitful sleep that checks self.ok
-					wait = max(0, 1.0/FPS + ts - time.time())
-					time.sleep(wait)
+					wait = max(0, 1.0/FPS + ts - time.time()) 
+					self.checkedwait(wait)
 			except zmstream.Timeout :
 				print 'timed out on stream, re-acquiring'
 			except zmstream.SocketError :
