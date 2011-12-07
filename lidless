@@ -3,6 +3,7 @@
 import sys
 import time
 import threading
+import signal
 import json
 
 import zmstream
@@ -193,6 +194,7 @@ if __name__ == '__main__' :
 		sys.exit(1)
 
 	t.start()
+	signal.signal(signal.SIGTERM, lambda a,b: t.stop())
 
 	while not t.done :
 		try :
