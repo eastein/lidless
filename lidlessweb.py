@@ -198,10 +198,17 @@ class JSONHandler(tornado.web.RequestHandler):
 	def percs(self) :
 		return self.application.__percepts__
 
+	@property
+	def spaceapis(self) :
+		return self.application.__spaceapis__
+
 	def wj(self, j) :
 		self.application.__io_instance__.add_callback(lambda: self._wj(j))
 
 	def _wj(self, j) :
+		self.set_header('Access-Control-Allow-Origin', '*')
+		self.set_header('Cache-Control', 'no-cache')
+		self.set_header('Content-Type', 'application/json')
 		self.write(j)
 		self.finish()
 
@@ -251,6 +258,37 @@ class JSHandler(tornado.web.RequestHandler):
 			d = open(ffn).read()
 			self.__class__.fcache[fn] = d
 			self.write(d)
+
+class SpaceAPI(object) :
+	def __init__(self, metadata, cameras, needed_activity) :
+		self.metadata = metadata
+		self.cameras = cameras
+		self.needed_activity = needed_activity
+
+	@property
+	def open(self) :
+		n = 0
+		for camera, level in self.cameras :
+			busy = camera.busy_percentage
+			if busy is not None and busy >= level :
+				n += 1
+		return n >= self.needed_activity
+
+class SpaceAPIsListHandler(JSONHandler):
+	def process_request(self):
+		return self.spaceapis.keys()
+
+class SpaceAPIHandler(JSONHandler):
+	def process_request(self, spaceapiname):
+		spaceapi = self.spaceapis[spaceapiname]
+
+		r = dict(spaceapi.metadata)
+		r['api'] = '0.11'
+		r['open'] = spaceapi.open
+
+		# FIXME fill in other fields?
+
+		return r
 
 class ListHandler(JSONHandler):
 	def process_request(self):
@@ -362,8 +400,9 @@ class InterfaceHandler(tornado.web.RequestHandler) :
 		self.write(self.application.__interface__)
 
 class LidlessWeb(threading.Thread) :
-	def __init__(self, percepts, port=8000, endpoint=None) :
+	def __init__(self, percepts, spaceapis, port=8000, endpoint=None) :
 		self.percepts = percepts
+		self.spaceapis = spaceapis
 		self.port = port
 		self.ok = True
 		self.endpoint = endpoint
@@ -383,9 +422,11 @@ class LidlessWeb(threading.Thread) :
 				(r"/api/([^/]+)/ticks$", TicksHandler),
 				(r"/api/([^/]+)/history$", HistoryHandler),
 				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
-
+				(r"/spaceapi$", SpaceAPIsListHandler),
+				(r"/spaceapi/([^/]+)$", SpaceAPIHandler),
 			])
 			self.application.__percepts__ = self.percepts
+			self.application.__spaceapis__ = self.spaceapis
 			self.application.__interface__ = open('interface.html').read()
 		else :
 			self.application = tornado.web.Application([

@@ -46,6 +46,7 @@ def usage() :
 def all_in(stanza, keys) :
 	for k in keys :
 		if k not in stanza :
+			print 'stanza of type %s needs setting %s, does not have it.\n' % (stanza['type'], k)
 			usage()
 
 def roled(role, stanza, thr, deactivate=False) :
@@ -159,6 +160,22 @@ if __name__ == '__main__' :
 
 			alerts.append(alert)
 
+	spaceapis = dict()
+
+	for stanza in conf :
+		if stanza['type'] == 'spaceapi' :
+			all_in(stanza, ['name', 'metadata', 'cameras', 'needed_activity'])
+			# these don't really have a role.
+			# TODO FIXME do type and existence checks on the values set here.
+
+			cameras = list()
+
+			for cam in stanza['cameras'] :
+				cameras.append((percepts[cam], stanza['cameras'][cam]))
+
+			spaceapi = lidlessweb.SpaceAPI(stanza['metadata'], cameras, stanza['needed_activity'])
+			spaceapis[stanza['name']] = spaceapi
+	
 	for stanza in conf :
 		if stanza['type'] == 'irc' :
 			all_in(stanza, ['server', 'nick', 'channel'])
@@ -180,7 +197,7 @@ if __name__ == '__main__' :
 			elif stanza['proxy_endpoint'] is None and stanza['proxy_mode'] is None:
 				er.reg_web(stanza['role'], stanza['port'])
 
-			lweb = lidlessweb.LidlessWeb(percepts, port=stanza['port'], endpoint=ep)
+			lweb = lidlessweb.LidlessWeb(percepts, spaceapis, port=stanza['port'], endpoint=ep)
 			t.add(lweb)
 			disqualified &= roled(role, stanza, lweb)
 

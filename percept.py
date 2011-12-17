@@ -232,6 +232,12 @@ class Percept(threading.Thread) :
 
 			return self.ratio_busy
 
+	@property
+	def busy_percentage(self) :
+		ratio = self.busy
+		if ratio is not None :
+			return round(ratio * 100)
+
 	def ratio_reaction(self) :
 		for alert in self.alerts :
 			alert.evaluate()
@@ -356,9 +362,9 @@ class Alert(object) :
 
 	def evaluate(self) :
 		if self.ok :		
-			ratio = self.percept.busy
+			percentage = self.percept.busy_percentage
 
-			new_active = ratio is not None and round(ratio * 100) > self.level
+			new_active = percentage is not None and percentage > self.level
 
 			if self.mode == 'instant' :
 				old_active = self.active
