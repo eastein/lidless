@@ -194,6 +194,8 @@ class ProtoFuture(object) :
 		return self.continuation(self.fut.result())
 
 class JSONHandler(tornado.web.RequestHandler):
+	NO_WRAP = False
+
 	@property
 	def percs(self) :
 		return self.application.__percepts__
@@ -202,10 +204,11 @@ class JSONHandler(tornado.web.RequestHandler):
 	def spaceapis(self) :
 		return self.application.__spaceapis__
 
-	def wj(self, j) :
-		self.application.__io_instance__.add_callback(lambda: self._wj(j))
+	def wj(self, status, j) :
+		self.application.__io_instance__.add_callback(lambda: self._wj(status, j))
 
-	def _wj(self, j) :
+	def _wj(self, status, j) :
+		self.set_status(status)
 		self.set_header('Access-Control-Allow-Origin', '*')
 		self.set_header('Cache-Control', 'no-cache')
 		self.set_header('Content-Type', 'application/json')
@@ -217,7 +220,11 @@ class JSONHandler(tornado.web.RequestHandler):
 		cn = self.__class__.__name__
 		cn += ' ' * (14 - len(cn))
 		print '[json/%s] %s GET args %s' % (cn, self.request.remote_ip, str(a))
-		result = self.process_request(*a)
+		try :
+			result = self.process_request(*a)
+		except Exception, e :
+			result = e
+		
 		if isinstance(result, (futures.Future, ProtoFuture)) :
 			result.add_done_callback(self.handle_response)
 		else :
@@ -225,16 +232,25 @@ class JSONHandler(tornado.web.RequestHandler):
 
 	def handle_response(self, result) :
 		error = None
+		status = 200
 		try :
 			if isinstance(result, (futures.Future, ProtoFuture)) :
 				result = result.result()
+			elif isinstance(result, Exception) :
+				raise result
 			
-			resp = {'status' : 'ok', 'data' : result}
+			if self.NO_WRAP :
+				resp = result
+			else :
+				resp = {'status' : 'ok', 'data' : result}
 		except ValueError :
+			status = 404
 			error = 'bad input'
 		except KeyError :
+			status = 404
 			error = 'not found'
 		except :
+			status = 500
 			print 'exception while fetching deferred result'
 			traceback.print_exc()
 			error = 'exception'
@@ -242,7 +258,7 @@ class JSONHandler(tornado.web.RequestHandler):
 		if error :
 			resp = {'status' : 'failure', 'reason' : error}
 
-		self.wj(resp)
+		self.wj(status, resp)
 
 class JSHandler(tornado.web.RequestHandler):
 	def get(self, fn):
@@ -279,6 +295,8 @@ class SpaceAPIsListHandler(JSONHandler):
 		return self.spaceapis.keys()
 
 class SpaceAPIHandler(JSONHandler):
+	NO_WRAP = True
+
 	def process_request(self, spaceapiname):
 		spaceapi = self.spaceapis[spaceapiname]
 
@@ -296,8 +314,6 @@ class ListHandler(JSONHandler):
 
 class CamHandler(JSONHandler):
 	def process_request(self, camname):
-		if camname not in self.percs :
-			raise KeyError
 		cap = ['ratio']
 		if hasattr(self.percs[camname], 'history') :
 			cap.append('history')
