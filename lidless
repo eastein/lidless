@@ -165,6 +165,7 @@ if __name__ == '__main__' :
 	for stanza in conf :
 		if stanza['type'] == 'spaceapi' :
 			all_in(stanza, ['name', 'metadata', 'cameras', 'needed_activity'])
+			stanza.setdefault("status_note", None)
 			# these don't really have a role.
 			# TODO FIXME do type and existence checks on the values set here.
 
@@ -173,7 +174,7 @@ if __name__ == '__main__' :
 			for cam in stanza['cameras'] :
 				cameras.append((percepts[cam], stanza['cameras'][cam]))
 
-			spaceapi = lidlessweb.SpaceAPI(stanza['metadata'], cameras, stanza['needed_activity'])
+			spaceapi = lidlessweb.SpaceAPI(stanza['metadata'], cameras, stanza['needed_activity'], stanza['status_note'])
 			spaceapis[stanza['name']] = spaceapi
 	
 	for stanza in conf :

@@ -276,19 +276,27 @@ class JSHandler(tornado.web.RequestHandler):
 			self.write(d)
 
 class SpaceAPI(object) :
-	def __init__(self, metadata, cameras, needed_activity) :
+	def __init__(self, metadata, cameras, needed_activity, status_note) :
 		self.metadata = metadata
 		self.cameras = cameras
 		self.needed_activity = needed_activity
+		self.status_note = status_note
 
 	@property
 	def open(self) :
 		n = 0
+		min_ts = None
 		for camera, level in self.cameras :
+			ft = camera.frame_time
+			if ft is not None :
+				min_ts = ft
+			else :
+				min_ts = min(min_ts, ft)			
+
 			busy = camera.busy_percentage
 			if busy is not None and busy >= level :
 				n += 1
-		return n >= self.needed_activity
+		return min_ts, n >= self.needed_activity
 
 class SpaceAPIsListHandler(JSONHandler):
 	def process_request(self):
@@ -302,9 +310,17 @@ class SpaceAPIHandler(JSONHandler):
 
 		r = dict(spaceapi.metadata)
 		r['api'] = '0.11'
-		r['open'] = spaceapi.open
+		oldest_frametime, r['open'] = spaceapi.open
+		if oldest_frametime is not None :
+			r['lastchange'] = oldest_frametime
 
-		# FIXME fill in other fields?
+		if r['open'] :
+			r['status'] = "Webcams detect activity."
+		else :
+			r['status'] = "Webcams don't show much activity."
+
+		if spaceapi.status_note :
+			r['status'] += " " + spaceapi.status_note
 
 		return r
 
