@@ -337,12 +337,13 @@ class Percept(threading.Thread) :
 				self.checkedwait(SOCKET_RETRY_SEC)
 
 class Alert(object) :
-	def __init__(self, p, mode, level, message, throttle, duration=None) :
+	def __init__(self, p, mode, low_level, high_level, message, throttle, duration=None) :
 		self.ok = True
 		self.percept = p
 		self.percept.alerts.append(self)
 		self.mode = mode
-		self.level = level
+		self.low_level = low_level
+		self.high_level = high_level
 		self.message = message
 		self.throttle = throttle
 		self.duration = duration
@@ -364,7 +365,13 @@ class Alert(object) :
 		if self.ok :		
 			percentage = self.percept.busy_percentage
 
-			new_active = percentage is not None and percentage > self.level
+			new_active = False
+			if percentage is not None :
+				new_active = True
+				if self.low_level is not None :
+					new_active &= (percentage >= self.low_level)
+				if self.high_level is not None :
+					new_active &= (percentage <= self.high_level)
 
 			if self.mode == 'instant' :
 				old_active = self.active

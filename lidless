@@ -132,7 +132,7 @@ if __name__ == '__main__' :
 
 	for stanza in conf :
 		if stanza['type'] == 'alert' :
-			all_in(stanza, ['mode', 'level', 'message', 'camera', 'throttle'])
+			all_in(stanza, ['mode', 'message', 'camera', 'throttle'])
 			if stanza['camera'] not in percepts :
 				usage()
 
@@ -149,7 +149,19 @@ if __name__ == '__main__' :
 				else :
 					args['duration'] = stanza['duration']
 
-			alert = percept.Alert(perc, stanza['mode'], stanza['level'], stanza['message'], stanza['throttle'], **args)
+			if 'level' in stanza and 'low_level' in stanza :
+				print 'you cannot use both level and low_level in a stanza; they are 2 names for one setting.'
+				usage()
+
+			low_level = None
+			high_level = None
+			if 'level' in stanza :
+				low_level = stanza['level']
+			elif 'low_level' in stanza :
+				low_level = stanza['low_level']
+			if 'high_level' in stanza :
+				high_level = stanza['high_level']
+			alert = percept.Alert(perc, stanza['mode'], low_level, high_level, stanza['message'], stanza['throttle'], **args)
 
 			dq = roled(role, stanza, alert)
 
