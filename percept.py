@@ -33,7 +33,7 @@ class Percept(threading.Thread) :
 		self.alerts = []
 		threading.Thread.__init__(self)
 
-	def image_pil(self, pil_image) :
+	def image_frompil(self, pil_image) :
 		cv_im = cv.CreateImageHeader(pil_image.size, cv.IPL_DEPTH_8U, 3)
 		cv.SetData(cv_im, pil_image.tostring())
 		return cv_im
@@ -244,10 +244,10 @@ class Percept(threading.Thread) :
 
 	# move to a base
 	def checkedwait(self, secs) :
-		for i in range(int(secs * 10)):
+		for i in range(int(secs * 100)):
 			if not self.ok :
 				break
-			time.sleep(0.1)
+			time.sleep(0.01)
 
 	def run_zmq(self) :
 		import zmq
@@ -298,7 +298,7 @@ class Percept(threading.Thread) :
 					# TODO stop doing frame_time early when we may fail in this loop? grep all code
 					self.frame_time = ts
 
-					img = self.image_pil(i)
+					img = self.image_frompil(i)
 
 					filtered = self.filter_edges(img)
 					#cv.SaveImage('edges.png', filtered)
@@ -328,8 +328,10 @@ class Percept(threading.Thread) :
 						self.ratio_reaction()
 						#cv.SaveImage('cumulative.png', history)
 
-					wait = max(0, 1.0/FPS + ts - time.time()) 
-					self.checkedwait(wait)
+					spent = time.time() - ts
+					wait = 1.0/FPS - spent
+					if wait > 0.0 :
+						self.checkedwait(wait)
 			except zmstream.Timeout :
 				print 'timed out on stream, re-acquiring'
 			except zmstream.SocketError :
