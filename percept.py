@@ -38,7 +38,7 @@ class Percept(threading.Thread) :
 		cv.SetData(cv_im, pil_image.tostring())
 		return cv_im
 
-	def filter_edges(self, img) :
+	def filter_edges_luminance(self, img) :
 		sz = cv.GetSize(img)
 		bw = cv.CreateMat(sz[1], sz[0], cv.CV_8U)
 		med = cv.CreateMat(sz[1], sz[0], cv.CV_8U)
@@ -46,7 +46,8 @@ class Percept(threading.Thread) :
 		cv.CvtColor(img, bw, cv.CV_RGB2GRAY)
 		cv.Smooth(bw, med, cv.CV_MEDIAN, 5)
 		cv.Canny(med, canny, 75, 112, 3)
-		return canny
+		luminance = self.average_luminance(bw)
+		return canny, luminance
 
 	def dict_diff(self, d1, d2) :
 		key_merge = set(d1.keys()).intersection(d2.keys())
@@ -55,6 +56,16 @@ class Percept(threading.Thread) :
 			result[k] = abs(d1[k] - d2[k])
 		return result
 	
+	def average_luminance(self, img) :
+		sz = cv.GetSize(img)
+		w, h = sz[1], sz[0]
+		total = 0
+		for x in range(w) :
+			for y in range(h) :
+				total += img[x, y]
+
+		return total / float(w * h)
+
 	def bin_edgecount(self, img, bins=4096) :
 		sz = cv.GetSize(img)
 		twi = sz[1]
@@ -152,6 +163,8 @@ class Percept(threading.Thread) :
 		return img_out
 
 	def record_frame(self, motionframe, history) :
+		# TODO convert to milliseconds, use more bit depth to achieve it
+
 		MAX = 256 - 1
 
 		if history is None :
@@ -168,9 +181,22 @@ class Percept(threading.Thread) :
 					history[x,y] = 0
 				else :
 					if history[x,y] != MAX :
-						history[x,y] += 1
+						history[x,y] += 1 # TODO #7 do not assume 1 second here... quite wrong
 
 		return history
+
+	def time_decay(self, history, by_seconds) :
+		# TODO convert to milliseconds, use more bit depth to achieve it
+		
+		MAX = 256 - 1
+
+		sz = cv.GetSize(history)
+		w, h = sz[1], sz[0]
+
+		for x in range(w) :
+			for y in range(h) :
+				if history[x,y] != MAX :
+					history[x,y] += by_seconds
 
 	def busyness_array(self, motionframe) :
 		width, height = self.get_wh(motionframe)
@@ -287,6 +313,8 @@ class Percept(threading.Thread) :
 
 		edge_bin = {}
 		history = None
+		previous_luminance = None
+		luminance_change = 0.0
 
 		while self.ok :
 			try :
@@ -300,8 +328,17 @@ class Percept(threading.Thread) :
 
 					img = self.image_frompil(i)
 
-					filtered = self.filter_edges(img)
+					filtered, luminance = self.filter_edges_luminance(img)
 					#cv.SaveImage('edges.png', filtered)
+
+					if previous_luminance is not None :
+						# percent difference from the more luminant luminance
+						luminance_change_abs = abs(previous_luminance - luminance)
+						larger_luminance = max(previous_luminance, luminance)
+						if larger_luminance < 1.0 :
+							luminance_change = 0.0
+						else :
+							luminance_change = luminance_change_abs / larger_luminance
 
 					new_bin = self.bin_edgecount(filtered)
 
@@ -310,10 +347,15 @@ class Percept(threading.Thread) :
 
 					motion_image = self.bins_to_img(diff)
 					if motion_image :
-						motion_buffer = self.determine_busyness(motion_image)
-						#cv.SaveImage('motion.png', motion_buffer)
+						if luminance_change < 0.7 : # TODO use a constant
+							motion_buffer = self.determine_busyness(motion_image)
+							#cv.SaveImage('motion.png', motion_buffer)
 
-						history = self.record_frame(motion_buffer, history)
+							# TODO #7; this function assumes a certain time interval which is not valid
+							history = self.record_frame(motion_buffer, history)
+						else :
+							#print 'skipping recording to history for %s, luminance_change = %0.3f' % (self.camname, luminance_change)
+							self.time_decay(history, 1) # TODO #7 use actual timing data here, not assume 1 second
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
 						if zmq_socket is not None :
@@ -321,13 +363,17 @@ class Percept(threading.Thread) :
 								'camname' : self.camname,
 								'ratio_busy' : self.ratio_busy,
 								'frame_time' : ts,
-								'busy_cells' : self.busyness_array(motion_buffer)
+								'busy_cells' : self.busyness_array(motion_buffer),
+								'luminance' : luminance
 							}
 							zmq_socket.send(json.dumps(msg))
-						print 'ratio busy %0.3f: %s' % (self.ratio_busy, self.camname)
+
+						print '%s frame processed, ratio busy %0.3f, lumr %1.3f lum %3.1f' % (self.camname.ljust(20), self.ratio_busy, luminance_change, luminance)
 						self.ratio_reaction()
 						#cv.SaveImage('cumulative.png', history)
 
+					# record luminance for later comparison
+					previous_luminance = luminance
 					spent = time.time() - ts
 					wait = 1.0/FPS - spent
 					if wait > 0.0 :
