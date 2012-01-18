@@ -8,26 +8,34 @@ class LidlessBot(mediorc.IRC) :
 		self.alerts = alerts
 		mediorc.IRC.__init__(self, server, nick, chan)
 
+	def summarize_cameras(self, propname, noun) :
+		if not self.percepts :
+			msg = 'no cameras.'
+		else :
+			msgs = []
+			for pname in self.percepts :
+				bus = getattr(self.percepts[pname], propname)
+
+				if bus is None :
+					state = "unknown"
+				else :
+					state = '%d%% %s' % (round(bus * 100), noun)
+
+				msgs.append('%s: %s' % (pname, state))
+			msg = ', '.join(msgs)
+		return msg
+
 	def on_pubmsg(self, c, e) :
 		chan = e.target()
 		txt = e.arguments()[0]
 
+		msg = None
 		if txt == '!space' :
-			if not self.percepts :
-				msg = 'no cameras.'
-			else :
-				msgs = []
-				for pname in self.percepts :
-					bus = self.percepts[pname].busy
+			msg = self.summarize_cameras('busy', 'busy')
+		elif txt == '!light' :
+			msg = self.summarize_cameras('light', 'lit')
 
-					if bus is None :
-						state = "unknown"
-					else :
-						state = '%d%% busy' % round(bus * 100)
-
-					msgs.append('%s: %s' % (pname, state))
-				msg = ', '.join(msgs)
-			
+		if msg :
 			self.connection.privmsg(chan, msg)
 
 	def do_work(self) :

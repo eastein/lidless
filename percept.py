@@ -30,6 +30,7 @@ class Percept(threading.Thread) :
 		self.active = True
 		self.frame_time = None
 		self.ratio_busy = None
+		self.luminance = None
 		self.alerts = []
 		threading.Thread.__init__(self)
 
@@ -247,6 +248,18 @@ class Percept(threading.Thread) :
 		self.streamer.start()
 
 	@property
+	def light(self) :
+		if self.ok :
+			if self.luminance is None or self.luminance is None :
+				# no history or no frame at all has been acquired
+				return None
+
+			if self.frame_time < time.time() - SEC_BEFORE_UNK :
+				return None
+
+			return self.luminance / 255.0
+
+	@property
 	def busy(self) :
 		if self.ok :
 			if self.ratio_busy is None or self.frame_time is None :
@@ -291,6 +304,7 @@ class Percept(threading.Thread) :
 				if msg['camname'] == self.camname :
 					self.frame_time = msg['frame_time']
 					self.ratio_busy = msg['ratio_busy']
+					self.luminance = msg['luminance']
 					self.ratio_reaction()
 
 	@property
@@ -313,7 +327,6 @@ class Percept(threading.Thread) :
 
 		edge_bin = {}
 		history = None
-		previous_luminance = None
 		luminance_change = 0.0
 
 		while self.ok :
@@ -331,10 +344,10 @@ class Percept(threading.Thread) :
 					filtered, luminance = self.filter_edges_luminance(img)
 					#cv.SaveImage('edges.png', filtered)
 
-					if previous_luminance is not None :
+					if self.luminance is not None :
 						# percent difference from the more luminant luminance
-						luminance_change_abs = abs(previous_luminance - luminance)
-						larger_luminance = max(previous_luminance, luminance)
+						luminance_change_abs = abs(self.luminance - luminance)
+						larger_luminance = max(self.luminance, luminance)
 						if larger_luminance < 1.0 :
 							luminance_change = 0.0
 						else :
@@ -351,7 +364,7 @@ class Percept(threading.Thread) :
 							motion_buffer = self.determine_busyness(motion_image)
 							#cv.SaveImage('motion.png', motion_buffer)
 
-							# TODO #7; this function assumes a certain time interval which is not valid
+							# TODO #7; this function assumes a 1 second time interval which is not valid
 							history = self.record_frame(motion_buffer, history)
 						else :
 							#print 'skipping recording to history for %s, luminance_change = %0.3f' % (self.camname, luminance_change)
@@ -373,7 +386,7 @@ class Percept(threading.Thread) :
 						#cv.SaveImage('cumulative.png', history)
 
 					# record luminance for later comparison
-					previous_luminance = luminance
+					self.luminance = luminance
 					spent = time.time() - ts
 					wait = 1.0/FPS - spent
 					if wait > 0.0 :
