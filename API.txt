@@ -29,7 +29,8 @@ Cameras that include a `zmq_url` parameter will engage their ZeroMQ API mode.  J
       "camname" : "warehouse",
       "ratio_busy" : 0.0087316176470588237,
       "frame_time" : 1322038719.3862939,
+      "luminance" : 187.842724,
       "busy_cells" : [[True, False, False, ...], [True, ...], ...]
     }
 
-The above example is for a camera called warehouse that's 0.87% busy.  `frame_time` is a UTC unix timestamp with sub-second precision that indicates the time of retrieval of the most recent image frame that the data is based on.  The Indexing in the `busy_cells` is `object["busy_cells"][x][y]`.  If the value is True, it means that cell was busy at the time; do not expect ratio_busy to match up with the total ratio of True/False counts as the ratio_busy measure is based on some history as well.
+The above example is for a camera called warehouse that's 0.87% busy.  `frame_time` is a UTC unix timestamp with sub-second precision that indicates the time of retrieval of the most recent image frame that the data is based on.  The Indexing in the `busy_cells` is `object["busy_cells"][x][y]`.  If the value is True, it means that cell was busy at the time; do not expect `ratio_busy` to match up with the total ratio of True/False counts as the `ratio_busy` measure is based on some history as well.  `luminance` is on a scale of 0 to 255 and is the average luminance of the last frame received.
