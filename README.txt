@@ -7,6 +7,7 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 * zmstream (https://github.com/eastein/zmstream)
 * mediorc (https://github.com/eastein/mediorc)
 * ramirez (https://github.com/eastein/ramirez)
+* PIL
 * flot, as a git submodule.  To make this work, you must run 'git submodule init' / 'git submodule update'.
 * pyzmq (http://www.zeromq.org/bindings:python) if you use the `zmq_url` setting anywhere.
 * pyffmpeg (http://code.google.com/p/pyffmpeg/) if you use the `use_ffmpeg` setting anywhere.
