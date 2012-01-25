@@ -19,8 +19,9 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, camname, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG) :
+	def __init__(self, camname, description, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG) :
 		self.camname = camname
+		self.description = description
 		self.url = url
 		self.auth = auth
 		self.zm_auth_hash_secret = zm_auth_hash_secret

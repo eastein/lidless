@@ -38,16 +38,34 @@ function camera_discover() {
 			var graphhtml = '';
 			for (var i in data.data) {
 				var camname = data.data[i];
-				graphhtml = graphhtml + '<h3>' + camname + '</h3><div style="text-align: center; width: 100%;"><div id="' + camname + 'ratio" class="ratio">Unk%</div><div id="' + camname + 'trace" class="trace"></div></div>';
+				graphhtml = graphhtml + '<h3 id="' + camname + 'description">' + camname + '</h3><div style="text-align: center; width: 100%;"><div id="' + camname + 'ratio" class="ratio">Unk%</div><div id="' + camname + 'trace" class="trace"></div></div>';
 			}
 			$('#graphs').html(graphhtml);
 			cams = data.data;
 			start_ratio();
+			start_description();
 			start_history();
 		}
 	});
 }
 
+function ajax_description(camname) {
+	$.ajax({
+		url: '/api/' + camname + '/description',
+		dataType: 'json',
+		success: function(data) {
+			if (data.data != null) {
+				$('#' + camname + 'description').html(data.data);
+			}
+		}
+	});
+}
+
+function start_description() {
+	for (var i in cams) {
+		ajax_description(cams[i]);
+	}
+}
 function ajax_ratio(camname) {
 	$.ajax({
 		url: '/api/' + camname + '/ratio',

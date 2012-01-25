@@ -330,7 +330,7 @@ class ListHandler(JSONHandler):
 
 class CamHandler(JSONHandler):
 	def process_request(self, camname):
-		cap = ['ratio']
+		cap = ['ratio', 'description']
 		if hasattr(self.percs[camname], 'history') :
 			cap.append('history')
 			cap.append('ticks')
@@ -339,6 +339,13 @@ class CamHandler(JSONHandler):
 class RatioHandler(JSONHandler):
 	def process_request(self, camname):
 		return self.percs[camname].busy
+
+class DescriptionHandler(JSONHandler):
+	def process_request(self, camname):
+		r = self.percs[camname].description
+		if r is None :
+			r = self.percs[camname].name
+		return r
 
 class TicksHandler(JSONHandler):
 	def process_request(self, camname):
@@ -451,6 +458,7 @@ class LidlessWeb(threading.Thread) :
 				(r"/api$", ListHandler),
 				(r"/api/([^/]+)$", CamHandler),
 				(r"/api/([^/]+)/ratio$", RatioHandler),
+				(r"/api/([^/]+)/description$", DescriptionHandler),
 				(r"/api/([^/]+)/ticks$", TicksHandler),
 				(r"/api/([^/]+)/history$", HistoryHandler),
 				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),

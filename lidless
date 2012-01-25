@@ -117,8 +117,11 @@ if __name__ == '__main__' :
 			if not hasattr(zmstream.Mode, mk) :
 				usage()
 			mode = getattr(zmstream.Mode, mk)
+		description = None
+		if 'description' in stanza :
+			description = stanza['description']
 		
-		perc = percept.Percept(stanza['name'], stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url, mode=mode)
+		perc = percept.Percept(stanza['name'], description, stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url, mode=mode)
 		t.add(perc)
 
 		perc.history = historical.History(perc.camname, perc)
