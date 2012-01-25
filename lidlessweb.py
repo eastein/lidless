@@ -344,7 +344,7 @@ class DescriptionHandler(JSONHandler):
 	def process_request(self, camname):
 		r = self.percs[camname].description
 		if r is None :
-			r = self.percs[camname].name
+			r = self.percs[camname].camname
 		return r
 
 class TicksHandler(JSONHandler):
