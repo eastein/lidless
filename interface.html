@@ -95,7 +95,14 @@ function ajax_history(camname) {
 		url: '/api/' + camname + '/history/' + period,
 		dataType: 'json',
 		success : function(data) {
-			$.plot($("#" + camname + "trace"), [data.data], {
+			var localData = new Array(data.data.length);
+			var timeZoneOffsetMs = new Date().getTimezoneOffset() * 60 * 1000; //convert from minutes to ms
+
+			for(var i = 0; i < localData.length;i++){
+				localData[i] = data.data[i];
+				localData[i][0] +=  timeZoneOffsetMs;
+
+			$.plot($("#" + camname + "trace"), [localData], {
 				xaxis: { mode: "time" },
 				yaxis: { min: 0 }
 			});
