@@ -33,8 +33,26 @@
 		
 			var dataStartOffset = new Date(times[0][0]).getTimezoneOffset();
 			var dataEndOffset = new Date(times[times.length-1][0]).getTimezoneOffset();
+			var boundaryIndex = null;
 			if(dataStartOffset !== dataEndOffset){
-				$('#dst').text('DST boundary detected').after('<div id="DST-pre" class="graph');
+				$('#dst').text('DST boundary detected').after('<div id="DST-pre" class="trace"></div>');
+				
+				//naive implementation: check getTimezoneOffset on each time point until we find the boundary
+				//	issues: there are more clever ways to find the boundary
+				//		creating a new Date object is wasteful (especially since some of these were already created)
+				//		if creating an object at each check is necessary, we will create n objects that we don't need in the worst case -- not an issue for this test, but larger data sets would be a problem
+				for(i = 0;i < times.length;i++){
+					if(new Date(times[i][0]).getTimezoneOffset() !== dataStartOffset){
+						boundaryIndex = i;
+						break;
+					}
+				}
+				if(boundaryIndex !== null){
+					$('#DST-pre').append('index: ' + boundaryIndex);
+				}
+				else{
+					console.log("Could not find the boundary");
+				}
 			}
 		});
 		</script>
