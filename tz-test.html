@@ -20,12 +20,30 @@
 				xaxis: { mode: "time" },
 				yaxis: { min: 0 }
 			});
+	
+			// DST handling demo
+			var d1 = new Date("March 11, 2012"); //day DST starts this year
+			var oneHourInMs = 60 * 60 *1000;
+			var times = new Array();
+		
+			//create some fake data that crosses the DST boundary
+			for(i = 0;i < 24; i++){
+			    times[i] = [d1.getTime() + (i * oneHourInMs),i%4];
+			}
+		
+			var dataStartOffset = new Date(times[0][0]).getTimezoneOffset();
+			var dataEndOffset = new Date(times[times.length-1][0]).getTimezoneOffset();
+			if(dataStartOffset !== dataEndOffset){
+				$('#dst').text('DST boundary detected').after('<div id="DST-pre" class="graph');
+			}
 		});
 		</script>
 		<style>
-			div {
-				width:500px;
+			div.trace {
+				float: right;
+				width:76%;
 				height:120px;
+				margin: auto;
 			}
 		</style>
 	</head>
@@ -34,5 +52,6 @@
 		<div id="UTC" style="width:500px;height:120px;"></div>
 		<p>local</p>
 		<div id="localTZ" style="width:500px;height:120px;"></div>
+		<p id="dst"></p>
 	</body>
 </html>
