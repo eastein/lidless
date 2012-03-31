@@ -54,6 +54,35 @@ Here is an example:
 
 The username and password options work with HTTP basic authentication or ZoneMinder's time based authentication session at this time.  They are optional.  HTTPS does not work for camera sources.  If you want to go through ZoneMinder, the URL must end with auth= (the GET parameter for auth must be at the end), the `zm_auth_hash_secret` parameter must be added into the camera JSON stanza, and the `username`/`password` should be a valid user in the ZoneMinder instance.
 
+# Alerts
+
+These only make sense if you have an `irc` or `announced` stanza.  See the *roles* section for more about making an alert go to more than one output.
+
+    {
+      "role" : ["announcer", "frontend"],
+      "type" : "alert",
+      "mode" : "sustain",
+      "high_level" : 0,
+      "duration" : 73200,
+      "message" : "I've been sitting here in the woodshop for like a day and nobody came in. Will nobody touch my     wood?",
+      "camera" : "woodshop",
+      "throttle" : 86400
+    }
+
+How the `high_level`, `low_level` and `mode` settings here work will be documented later; for now, refer to the code in `percept.py` that concerns alerts.  The `throttle` parameter will prevent the alert from firing more often than every that-many seconds.
+
+## announced
+
+The program announced is a simple system for recieving textual commands that are spoken via text to speech.  If you have one running and would like to make alerts be sent over it, you can create an `announced` stanza, like so:
+
+    {
+      "role" : "announcer",
+      "type" : "announced",
+      "zmq_url" : "tcp://10.100.0.16:4503"
+    }
+
+See the *roles* section on alert routing considerations.
+
 ## FFMPEG
 
 *WARNING: EXPERIMENTAL*
@@ -67,7 +96,13 @@ If you have access to a stream that ffmpeg can open and does not require authent
 
 ## Roles
 
-Different parts of the system can be run in separate processes to avoid contention and performance issues.  Roles are settings in a stanza that specify what role name a process must be running as in order to execute the work related to the stanza.  For a camera instance, this is reading the video stream, doing perceptual computations on it, and recording the data periodically.  For a web instance not using proxying (see below), the work is doing read operations on databases for historical data and shared memory access for the ratio data (there are issues currently with a web instance or irc instance accessing the current ratio of a camera not running in the same role, as it must use the database to access this information at this time).  A process can only have one role: the default role is called `default`.
+Different parts of the system can be run in separate processes to avoid contention and performance issues.  Roles are settings in a stanza that specify what role name a process must be running as in order to execute the work related to the stanza.
+
+For a camera instance, this is reading the video stream, doing perceptual computations on it, and recording the data periodically.
+
+For a web instance not using proxying (see below), the work is doing read operations on databases for historical data and shared memory access for the ratio data (there are issues currently with a web instance or irc instance accessing the current ratio of a camera not running in the same role, as it must use the database to access this information at this time).  A process can only have one role: the default role is called `default`.
+
+An IRC instance will consume all alerts produced in its role, as will an announced instance.  You must run IRC and announced in separate processes (and hence, roles).  If you want alerts to go to more to than one, set the role on the alert stanza to a list of roles containing the consumers of alerts that you are targetting.  This has the added bonus feature (it's not a bug, really!) that you can send alerts to a specific subset of alert transmitting mediums.
 
 ## Proxying
 
