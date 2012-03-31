@@ -12,6 +12,7 @@ import percept
 import historical
 import lidlessweb
 import lidlessirc
+import lidlessannounced
 
 class ThreadManager(object) :
 	def __init__(self) :
@@ -50,7 +51,11 @@ def all_in(stanza, keys) :
 			usage()
 
 def roled(role, stanza, thr, deactivate=False) :
-	if stanza['role'] != role :
+	stanza_role = stanza['role']
+	if isinstance(stanza_role, str) :
+		stanza_role = [stanza_role]
+	
+	if role not in stanza_role:
 		if deactivate :
 			thr.deactivate()
 		else :
@@ -216,6 +221,12 @@ if __name__ == '__main__' :
 			lweb = lidlessweb.LidlessWeb(percepts, spaceapis, port=stanza['port'], endpoint=ep)
 			t.add(lweb)
 			disqualified &= roled(role, stanza, lweb)
+		elif stanza['type'] == 'announced' :
+			all_in(stanza, ['zmq_url'])
+			
+			announcer = lidlessannounced.LidlessAnnouncer(alerts, stanza['zmq_url'])
+			t.add(announcer)
+			disqualified &= roled(role, stanza, announcer)
 
 	if used_epr and not er.valid :
 		print "Error: proxy_mode: auto was used but not all cameras have a local non-proxy web host"
