@@ -70,7 +70,7 @@ These only make sense if you have an `irc` or `announced` stanza.  See the *role
       "mode" : "sustain",
       "high_level" : 0,
       "duration" : 73200,
-      "message" : "I've been sitting here in the woodshop for like a day and nobody came in. Will nobody touch my     wood?",
+      "message" : "I've been sitting here in the woodshop alone for like a day. I really need to get lathed.",
       "camera" : "woodshop",
       "throttle" : 86400
     }
