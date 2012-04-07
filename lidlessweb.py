@@ -1,5 +1,6 @@
 import re
 import sys
+import time
 import threading
 import traceback
 import random
@@ -157,14 +158,14 @@ class ProxyCachingHandler(tornado.web.RequestHandler):
 	@tornado.web.asynchronous
 	def get(self, url) :
 		if self.application.__requestdepot__.register(url, self) :
-			print '[proxyinghandler] %s QUEUE GET %s' % (self.request.remote_ip, url)
+			print '[%s] [proxyinghandler] %s QUEUE GET %s' % (time.ctime(), self.request.remote_ip, url)
 		else :
 			cached = self.application.__requestdepot__.cache_get(url)
 			if cached :
-				print '[proxyinghandler] %s CACHE GET %s' % (self.request.remote_ip, url)
+				print '[%s] [proxyinghandler] %s CACHE GET %s' % (time.ctime(), self.request.remote_ip, url)
 				self.application.__requestdepot__.respond(url, cached, False)
 			else :
-				print '[proxyinghandler] %s BEGIN GET %s' % (self.request.remote_ip, url)
+				print '[%s] [proxyinghandler] %s BEGIN GET %s' % (time.ctime(), self.request.remote_ip, url)
 				http_client = tornado.httpclient.AsyncHTTPClient()
 				h = lambda resp: self.application.__requestdepot__.respond(url, resp, True)
 				ep = self.application.__requestdepot__.endpoint
@@ -219,7 +220,7 @@ class JSONHandler(tornado.web.RequestHandler):
 	def get(self, *a):
 		cn = self.__class__.__name__
 		cn += ' ' * (14 - len(cn))
-		print '[json/%s] %s GET args %s' % (cn, self.request.remote_ip, str(a))
+		print '[%s] [json/%s] %s GET args %s' % (time.ctime(), cn, self.request.remote_ip, str(a))
 		try :
 			result = self.process_request(*a)
 		except Exception, e :
