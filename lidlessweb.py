@@ -154,7 +154,24 @@ class RequestDepot() :
 
 			del self.rdict[url]
 
-class ProxyCachingHandler(tornado.web.RequestHandler):
+class BaseHandler(tornado.web.RequestHandler):
+	def wj(self, status, j) :
+		self.application.__io_instance__.add_callback(lambda: self._wj(status, j))
+
+	def _wj(self, status, j) :
+		self.set_status(status)
+		self.set_header('Access-Control-Allow-Origin', '*')
+		self.set_header('Cache-Control', 'no-cache')
+		self.set_header('Content-Type', 'application/json')
+		self.write(j)
+		self.finish()
+
+class NotFoundHandler(BaseHandler):
+	@tornado.web.asynchronous
+	def get(self, url) :
+		self._wj(404, {'status' : 'failure', 'reason' : 'not found'})
+
+class ProxyCachingHandler(BaseHandler):
 	@tornado.web.asynchronous
 	def get(self, url) :
 		if self.application.__requestdepot__.register(url, self) :
@@ -170,7 +187,10 @@ class ProxyCachingHandler(tornado.web.RequestHandler):
 				h = lambda resp: self.application.__requestdepot__.respond(url, resp, True)
 				ep = self.application.__requestdepot__.endpoint
 				if isinstance(ep, EndpointRouter) :
-					ep = ep.route(url)
+					try :
+						ep = ep.route(url)
+					except KeyError :
+						self._wj(404, {'status' : 'failure', 'reason' : 'not found'})
 				http_client.fetch(ep + url, h, request_timeout=120.0)
 
 class ProtoFuture(object) :
@@ -194,7 +214,7 @@ class ProtoFuture(object) :
 		#print 'ProtoFuture.result'
 		return self.continuation(self.fut.result())
 
-class JSONHandler(tornado.web.RequestHandler):
+class JSONHandler(BaseHandler):
 	NO_WRAP = False
 
 	@property
@@ -204,17 +224,6 @@ class JSONHandler(tornado.web.RequestHandler):
 	@property
 	def spaceapis(self) :
 		return self.application.__spaceapis__
-
-	def wj(self, status, j) :
-		self.application.__io_instance__.add_callback(lambda: self._wj(status, j))
-
-	def _wj(self, status, j) :
-		self.set_status(status)
-		self.set_header('Access-Control-Allow-Origin', '*')
-		self.set_header('Cache-Control', 'no-cache')
-		self.set_header('Content-Type', 'application/json')
-		self.write(j)
-		self.finish()
 
 	@tornado.web.asynchronous
 	def get(self, *a):
@@ -472,6 +481,7 @@ class LidlessWeb(threading.Thread) :
 				(r"/api/([^/]+)/ticks$", TicksHandler),
 				(r"/api/([^/]+)/history$", HistoryHandler),
 				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
+				(r"(/.*)$", NotFoundHandler),
 			]
 		else :
 			handler_set += [
