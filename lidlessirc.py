@@ -21,7 +21,8 @@ class LidlessBot(mediorc.IRC) :
 				else :
 					state = '%d%% %s' % (round(bus * 100), noun)
 
-				msgs.append('%s: %s' % (pname, state))
+				usename = getattr(self.percepts[pname], 'description', pname)
+				msgs.append('%s: %s' % (usename, state))
 			msg = ', '.join(msgs)
 		return msg
 
