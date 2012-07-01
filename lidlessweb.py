@@ -40,7 +40,7 @@ class EndpointRouter() :
 		else :
 			return self.endpoint(m.group(1)) 
 
-	def  endpoint(self, cam=None) :
+	def endpoint(self, cam=None) :
 		return 'http://127.0.0.1:%d' % self._endpoint(cam)
 
 	def _endpoint(self, cam) :
@@ -331,7 +331,7 @@ class ListHandler(JSONHandler):
 
 class CamHandler(JSONHandler):
 	def process_request(self, camname):
-		cap = ['ratio', 'description']
+		cap = ['ratio', 'light', 'description']
 		if hasattr(self.percs[camname], 'history') :
 			cap.append('history')
 			cap.append('ticks')
@@ -340,6 +340,10 @@ class CamHandler(JSONHandler):
 class RatioHandler(JSONHandler):
 	def process_request(self, camname):
 		return self.percs[camname].busy
+
+class LightHandler(JSONHandler):
+	def process_request(self, camname):
+		return self.percs[camname].light
 
 class DescriptionHandler(JSONHandler):
 	def process_request(self, camname):
@@ -452,28 +456,34 @@ class LidlessWeb(threading.Thread) :
 		if not self.ok :
 			return
 		
+		handler_set = [
+			(r"/$", InterfaceHandler),
+			(r"/flot/([a-z0-9\.\-]+\.js)$", JSHandler), # pattern is a security issue, be careful!
+			(r"/api$", ListHandler),
+			(r"/api/([^/]+)$", CamHandler),
+			(r"/api/([^/]+)/description$", DescriptionHandler),
+			(r"/spaceapi$", SpaceAPIsListHandler),
+			(r"/spaceapi/([^/]+)$", SpaceAPIHandler),
+		]
 		if not self.endpoint :
-			self.application = tornado.web.Application([
-				(r"/$", InterfaceHandler),
-				(r"/flot/([a-z0-9\.\-]+\.js)$", JSHandler), # pattern is a security issue, be careful!
-				(r"/api$", ListHandler),
-				(r"/api/([^/]+)$", CamHandler),
+			handler_set += [
 				(r"/api/([^/]+)/ratio$", RatioHandler),
-				(r"/api/([^/]+)/description$", DescriptionHandler),
+				(r"/api/([^/]+)/light$", LightHandler),
 				(r"/api/([^/]+)/ticks$", TicksHandler),
 				(r"/api/([^/]+)/history$", HistoryHandler),
 				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
-				(r"/spaceapi$", SpaceAPIsListHandler),
-				(r"/spaceapi/([^/]+)$", SpaceAPIHandler),
-			])
-			self.application.__percepts__ = self.percepts
-			self.application.__spaceapis__ = self.spaceapis
-			self.application.__interface__ = open('interface.html').read()
+			]
 		else :
-			self.application = tornado.web.Application([
-				(r"(/.*)$", ProxyCachingHandler),
-			])
+			handler_set += [
+				(r"(/.*)$", ProxyCachingHandler)
+			]
 
+		self.application = tornado.web.Application(handler_set)
+		self.application.__percepts__ = self.percepts
+		self.application.__spaceapis__ = self.spaceapis
+		self.application.__interface__ = open('interface.html').read()
+
+		if self.endpoint :
 			self.application.__requestdepot__ = RequestDepot(self.endpoint)
 
 		# TODO catch bind error here!

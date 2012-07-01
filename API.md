@@ -20,12 +20,13 @@ All requests shall be GET.  No authentication shall be required.
 
 * /api: return list of camera names available
 * /api/camname: return list of camera capabilities.  Capabilities can be accessed via /api/camname/capname.
-* /api/camname/ratio: get current ratio.  Will be a floating point number if it's available.
+* /api/camname/ratio: get current ratio.  Will be a floating point number if it's available.  Range between 0 and 100, inclusive.
+* /api/camname/light: get current light level.  Will be a floating point number if it's available.  Range between 0 and 100, inclusive.
 * /api/camname/ticks: get 1 hour of ratio history in raw form.  To be documented.
 * /api/camname/history: get 1 hour of ratio history in binned average form.  To be documented.
 * /api/camname/history/range_ms: get range_ms of ratio history in binned average form.  To be documented.
 
-<A name="toc1-27" title="lidless ZeroMQ API" />
+<A name="toc1-28" title="lidless ZeroMQ API" />
 # lidless ZeroMQ API
 
 Cameras that include a `zmq_url` parameter will engage their ZeroMQ API mode.  JSON objects will be sent over the socket after every frame that results in busyness measurements being recorded.
