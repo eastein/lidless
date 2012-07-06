@@ -38,7 +38,7 @@ function camera_discover() {
 			var graphhtml = '';
 			for (var i in data.data) {
 				var camname = data.data[i];
-				graphhtml = graphhtml + '<h3 id="' + camname + 'description">' + camname + '</h3><div style="text-align: center; width: 100%;"><div id="' + camname + 'ratio" class="ratio">Unk%</div><div id="' + camname + 'trace" class="trace"></div></div>';
+				graphhtml = graphhtml + '<div style="text-align: left; width: 100%; float: left;"><div id="' + camname + 'description">' + camname + '</div><div id="' + camname + 'ratio" class="ratio">Unk%</div><div id="' + camname + 'trace" style="float: right;" class="trace"></div></div>';
 			}
 			$('#graphs').html(graphhtml);
 			cams = data.data;
