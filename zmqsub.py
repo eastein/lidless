@@ -44,15 +44,6 @@ class JSONZMQBindSub(object) :
 		self.c = zmq.Context(1)
 		self.s = self.c.socket(zmq.SUB)
 		self.s.bind(url)
-
-	def send(self, msg) :
-		self.s.send(json.dumps(msg))
-
-class JSONZMQPub(object) :
-	def __init__(self, url) :
-		self.c = zmq.Context(1)
-		self.s = self.c.socket(zmq.SUB)
-		self.s.bind(url)
 		self.s.setsockopt (zmq.SUBSCRIBE, "")
 
 	def recv(self) :
@@ -64,6 +55,15 @@ class JSONZMQPub(object) :
 			return self._last
 		else :
 			raise NoMessagesException
+
+class JSONZMQBindPub(object) :
+	def __init__(self, url) :
+		self.c = zmq.Context(1)
+		self.s = self.c.socket(zmq.PUB)
+		self.s.bind(url)
+
+	def send(self, msg) :
+		self.s.send(json.dumps(msg))
 
 class JSONZMQConnectPub(object) :
 	def __init__(self, url) :

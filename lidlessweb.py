@@ -11,6 +11,7 @@ import tornado.httpclient
 import concurrent.futures as futures
 import ramirez.mcore.events
 import os.path
+import zmqsub
 
 CAM_MATCH = re.compile('^/api/([^/]+)(|/.*)$')
 DEFAULT_RANGE_MATCH = re.compile('^/api/[^/]+/(ticks|history)$')
@@ -20,12 +21,14 @@ class EndpointRouter() :
 	def __init__(self) :
 		self.cam_role_map = {}
 		self.role_port_map = {}
+		self.role_zmqurl_map = {}
 
 	def reg_camera(self, cam, role) :
 		self.cam_role_map[cam] = role
 
-	def reg_web(self, role, port) :
+	def reg_web(self, role, port, zmq_url) :
 		self.role_port_map[role] = port
+		self.role_zmqurl_map[role] = zmq_url
 
 	@property
 	def valid(self) :
@@ -50,6 +53,9 @@ class EndpointRouter() :
 			return ports[0]
 		else :
 			return self.role_port_map[self.cam_role_map[cam]]
+
+	def zmqendpoint(self, cam) :
+		return self.role_zmqurl_map[self.cam_role_map[cam]]
 
 class RequestDepot() :
 	def __init__(self, endpoint) :
@@ -166,7 +172,20 @@ class BaseHandler(tornado.web.RequestHandler):
 		self.write(j)
 		self.finish()
 
-class NotFoundHandler(BaseHandler):
+class SnapshotHandler(tornado.web.RequestHandler):
+	def get(self, camname, tsus) :
+		try :
+			jpeg_str = self.application.__snapshots__[camname][long(tsus)]
+			self.set_status(200)
+			self.set_header('Content-Type', 'image/jpeg')
+			self.write(jpeg_str)
+		except KeyError :
+			self.set_status(404)
+			self.write('snapshot not found.')
+
+		self.finish()
+
+class NotFoundHandler(BaseHandler) :
 	@tornado.web.asynchronous
 	def get(self, url) :
 		self._wj(404, {'status' : 'failure', 'reason' : 'not found'})
@@ -452,17 +471,22 @@ class InterfaceHandler(tornado.web.RequestHandler) :
 		self.write(self.application.__interface__)
 
 class LidlessWeb(threading.Thread) :
-	def __init__(self, percepts, spaceapis, port=8000, endpoint=None) :
+	def __init__(self, percepts, spaceapis, port=8000, endpoint=None, role=None, zmq_url=None) :
 		self.percepts = percepts
 		self.spaceapis = spaceapis
 		self.port = port
 		self.ok = True
 		self.endpoint = endpoint
+		self.role = role
+		self.zmq_url = zmq_url
 		threading.Thread.__init__(self)
 
 	def run(self) :
 		if not self.ok :
 			return
+
+		if self.zmq_url :
+			self.zmq_socket = zmqsub.JSONZMQBindSub(self.zmq_url)
 		
 		handler_set = [
 			(r"/$", InterfaceHandler),
@@ -480,6 +504,7 @@ class LidlessWeb(threading.Thread) :
 				(r"/api/([^/]+)/ticks$", TicksHandler),
 				(r"/api/([^/]+)/history$", HistoryHandler),
 				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
+				(r"/api/([^/]+)/snapshot/([0-9]+).jpg$", SnapshotHandler),
 				(r"(/.*)$", NotFoundHandler),
 			]
 		else :
@@ -490,6 +515,7 @@ class LidlessWeb(threading.Thread) :
 		self.application = tornado.web.Application(handler_set)
 		self.application.__percepts__ = self.percepts
 		self.application.__spaceapis__ = self.spaceapis
+		self.application.__snapshots__ = dict()
 		self.application.__interface__ = open('interface.html').read()
 
 		if self.endpoint :
@@ -499,7 +525,32 @@ class LidlessWeb(threading.Thread) :
 		self.application.listen(self.port)
 
 		self.application.__io_instance__ = tornado.ioloop.IOLoop.instance()
+
+		if self.zmq_url :
+			self.snapshot_setup_poll()
+
 		self.application.__io_instance__.start()
+
+	def snapshot_setup_poll(self) :
+		self.application.__io_instance__.add_timeout(time.time() + 0.5, self.snapshot_poll)
+
+	def snapshot_poll(self) :
+		self.snapshot_setup_poll()
+		try :
+			msg = self.zmq_socket.recv()
+		except zmqsub.NoMessagesException :
+			return
+
+		# FIXME add cleanup process
+
+		if msg['mtype'] == 'snapshot_request' :
+			camname = msg['camname']
+			percept = self.percepts[camname]
+			tsus = msg['tsus']
+			jpg = percept.jpeg
+			if jpg :
+				self.application.__snapshots__.setdefault(camname, dict())
+				self.application.__snapshots__[camname][tsus] = jpg
 
 	def stop(self) :
 		self.ok = False

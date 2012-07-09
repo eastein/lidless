@@ -122,11 +122,15 @@ if __name__ == '__main__' :
 			if not hasattr(zmstream.Mode, mk) :
 				usage()
 			mode = getattr(zmstream.Mode, mk)
+
 		description = None
 		if 'description' in stanza :
 			description = stanza['description']
-		
-		perc = percept.Percept(stanza['name'], description, stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url, mode=mode)
+		snapshot = False
+		if 'snapshot' in stanza :
+			snapshot = stanza['snapshot']
+
+		perc = percept.Percept(stanza['name'], description, stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url, mode=mode, snapshot=snapshot, role=stanza['role'])
 		t.add(perc)
 
 		perc.history = historical.History(perc.camname, perc)
@@ -200,7 +204,7 @@ if __name__ == '__main__' :
 	for stanza in conf :
 		if stanza['type'] == 'irc' :
 			all_in(stanza, ['server', 'nick', 'channel'])
-			irct = lidlessirc.LidlessBotThread(stanza['server'], stanza['nick'], stanza['channel'], percepts, alerts)
+			irct = lidlessirc.LidlessBotThread(stanza['server'], stanza['nick'], stanza['channel'], percepts, alerts, er)
 			t.add(irct)
 			disqualified &= roled(role, stanza, irct)
 		elif stanza['type'] == 'web' :
@@ -209,6 +213,7 @@ if __name__ == '__main__' :
 			# default proxy settings
 			stanza.setdefault('proxy_endpoint', None)
 			stanza.setdefault('proxy_mode', None)
+			stanza.setdefault('zmq_url', None)
 
 			ep = stanza['proxy_endpoint']
 
@@ -216,9 +221,9 @@ if __name__ == '__main__' :
 				ep = er
 				used_epr = True
 			elif stanza['proxy_endpoint'] is None and stanza['proxy_mode'] is None:
-				er.reg_web(stanza['role'], stanza['port'])
+				er.reg_web(stanza['role'], stanza['port'], stanza['zmq_url'])
 
-			lweb = lidlessweb.LidlessWeb(percepts, spaceapis, port=stanza['port'], endpoint=ep)
+			lweb = lidlessweb.LidlessWeb(percepts, spaceapis, port=stanza['port'], endpoint=ep, role=stanza['role'], zmq_url=stanza['zmq_url'])
 			t.add(lweb)
 			disqualified &= roled(role, stanza, lweb)
 		elif stanza['type'] == 'announced' :

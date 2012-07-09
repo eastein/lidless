@@ -9,6 +9,8 @@ import threading
 import time
 import json
 import Queue
+import StringIO
+import base64
 
 SOCKET_RETRY_SEC = 10
 NO_FRAME_THR = 10
@@ -19,7 +21,7 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, camname, description, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG) :
+	def __init__(self, camname, description, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG, snapshot=False, role=None) :
 		self.camname = camname
 		self.description = description
 		self.url = url
@@ -33,6 +35,8 @@ class Percept(threading.Thread) :
 		self.ratio_busy = None
 		self.luminance = None
 		self.alerts = []
+		self.snapshot = snapshot
+		self.role = role
 		threading.Thread.__init__(self)
 
 	def image_frompil(self, pil_image) :
@@ -273,6 +277,20 @@ class Percept(threading.Thread) :
 			return self.ratio_busy
 
 	@property
+	def jpeg(self) :
+		if self.ok :
+			if self.frame_time < time.time() - SEC_BEFORE_UNK :
+				return None
+			
+			if not self.snapshot :
+				return None
+			
+			try :
+				return self.jpeg_str
+			except AttributeError :
+				return None
+
+	@property
 	def busy_percentage(self) :
 		ratio = self.busy
 		if ratio is not None :
@@ -300,12 +318,17 @@ class Percept(threading.Thread) :
 			r, w, x = zmq.core.poll.select([s], [], [], 0.1)
 			if r :
 				msg = s.recv()
-
 				msg = json.loads(msg)
+
+				if msg['mtype'] != "percept_update" :
+					continue
+
 				if msg['camname'] == self.camname :
 					self.frame_time = msg['frame_time']
 					self.ratio_busy = msg['ratio_busy']
 					self.luminance = msg['luminance']
+					if 'base64_jpeg' in msg :
+						self.jpeg_str = base64.decodestring(msg['base64_jpeg'])
 					self.ratio_reaction()
 
 	@property
@@ -372,14 +395,24 @@ class Percept(threading.Thread) :
 							self.time_decay(history, 1) # TODO #7 use actual timing data here, not assume 1 second
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
+						if self.snapshot :
+							img_sio = StringIO.StringIO()
+							i.save(img_sio, format='jpeg')
+							img_sio.seek(0)
+							self.jpeg_str = img_sio.read()
+						
 						if zmq_socket is not None :
 							msg = {
+								'mtype' : "percept_update",
 								'camname' : self.camname,
 								'ratio_busy' : self.ratio_busy,
+								'luminance' : luminance,
 								'frame_time' : ts,
-								'busy_cells' : self.busyness_array(motion_buffer),
-								'luminance' : luminance
+								'busy_cells' : self.busyness_array(motion_buffer)
 							}
+							if self.snapshot :
+								msg['base64_jpeg'] = base64.encodestring(self.jpeg_str)
+							
 							zmq_socket.send(json.dumps(msg))
 
 						print '%s frame processed, ratio busy %0.3f, lumr %1.3f lum %3.1f' % (self.camname.ljust(20), self.ratio_busy, luminance_change, luminance)

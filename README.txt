@@ -83,6 +83,19 @@ The program announced is a simple system for recieving textual commands that are
 
 See the *roles* section on alert routing considerations.
 
+## Snapshot
+
+The snapshot feature's purpose is to allow IRC users to request snapshots of specific cameras; each camera can turn the feature on independently, and throttle the usage independently.  Usage:
+
+<user> !snapshot frontdoor
+<bot> snapshot taken of frontdoor http://example.com/api/frontdoor/snapshot/1341808842002134.jpg
+
+This URL is available for a short time.
+
+### Implementation/Configuration
+
+This feature was not originally intended to be available, so its implementation and configuration have a few more concerns than some of the other features.
+
 ## FFMPEG
 
 *WARNING: EXPERIMENTAL*

@@ -1,13 +1,22 @@
 import time
 import mediorc
 import Queue
+import zmqsub
 
 class LidlessBot(mediorc.IRC) :
-	def __init__(self, server, nick, chan, percepts, alerts) :
+	def __init__(self, server, nick, chan, percepts, alerts, endpoint) :
 		self.percepts = percepts
 		self.alerts = alerts
+		self.endpoint = endpoint
+		self.web_zmqs = {}
 		mediorc.IRC.__init__(self, server, nick, chan)
 
+	def route_web_zmq(self, camname) :
+		if camname not in self.web_zmqs :
+			zmqurl = self.endpoint.zmqendpoint(camname)
+			self.web_zmqs[camname] = zmqsub.JSONZMQConnectPub(zmqurl)
+		return self.web_zmqs[camname]
+	
 	def summarize_cameras(self, propname, noun) :
 		if not self.percepts :
 			msg = 'no cameras.'
@@ -30,13 +39,37 @@ class LidlessBot(mediorc.IRC) :
 
 	def on_pubmsg(self, c, e) :
 		chan = e.target()
-		txt = e.arguments()[0]
+		words = e.arguments()[0].split(' ')
 
 		msg = None
-		if txt == '!space' :
+		if words[0] == '!space' :
 			msg = self.summarize_cameras('busy', 'busy')
-		elif txt == '!light' :
+		elif words[0] == '!light' :
 			msg = self.summarize_cameras('light', 'lit')
+		elif words[0] in ['!snap', '!snapshot'] :
+			# TODO work with the description of the camera
+			try :
+				pname = words[1]
+				tsus = long(time.time() * 1000000)
+				if pname not in self.percepts :
+					msg = 'no such camera.'
+				elif not self.percepts[pname].snapshot :
+					msg = 'that camera does not allow snapshots'
+				else :
+					try :
+						socket = self.route_web_zmq(pname)
+
+						socket.send({
+							"mtype"   : "snapshot_request",	
+							"camname" : pname,
+							"tsus"    : tsus
+						})
+						# TODO configurable base URL
+						msg = 'sent request, should load at http://localhost:8000/api/%s/snapshot/%d.jpg' % (pname, tsus)
+					except KeyError :
+						msg = 'zmq_url is misconfigured for this camera, sorry.'
+			except IndexError :
+				msg = 'usage: !snapshot <camname>'
 
 		if msg :
 			self.connection.privmsg(chan, msg)
@@ -50,6 +83,6 @@ class LidlessBot(mediorc.IRC) :
 				pass
 
 class LidlessBotThread(mediorc.IRCThread) :
-	def __init__(self, server, nick, chan, percepts, alerts) :
-		self.bot_create = lambda: LidlessBot(server, nick, chan, percepts, alerts)
+	def __init__(self, server, nick, chan, percepts, alerts, endpoint) :
+		self.bot_create = lambda: LidlessBot(server, nick, chan, percepts, alerts, endpoint)
 		mediorc.IRCThread.__init__(self)
