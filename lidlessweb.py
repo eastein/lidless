@@ -135,9 +135,9 @@ class RequestDepot() :
 					if response.code in httplib.responses :
 						inb.set_status(response.code)
 					else :
-						print 'WARNING response.code = %s, sending 500' % str(response.code)
+						print 'WARNING response.code = %s, sending 502' % str(response.code)
 						# capacity issue?
-						inb.set_status(500)
+						inb.set_status(502)
 
 					for header in headers :
 						inb.set_header(header, headers[header])
@@ -145,7 +145,7 @@ class RequestDepot() :
 						inb.write(body)
 					elif err :
 						# TODO handle this better, there are many errcodes
-						inb.write("Error proxying")
+						inb.write("Bad gateway: error proxying")
 					
 					inb.finish()
 				except :
@@ -275,15 +275,14 @@ class JSHandler(tornado.web.RequestHandler):
 		if not hasattr(self.__class__, 'fcache') :
 			self.__class__.fcache = {}
 
-		if fn in self.__class__.fcache :
-			self.write(self.__class__.fcache[fn])
-		else :
+		if fn not in self.__class__.fcache :
 			ffn = os.path.join('flot', fn)
 			if not os.path.exists(ffn) :
 				raise tornado.web.HTTPError(404)
 			d = open(ffn).read()
 			self.__class__.fcache[fn] = d
-			self.write(d)
+
+		self.write(self.__class__.fcache[fn])
 
 class SpaceAPI(object) :
 	def __init__(self, metadata, cameras, needed_activity, status_note) :
