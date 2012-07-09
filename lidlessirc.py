@@ -69,8 +69,11 @@ class LidlessBot(mediorc.IRC) :
 					except KeyError :
 						msg = 'zmq_url is misconfigured for this camera, sorry.'
 			except IndexError :
-				msg = 'usage: !snapshot <camname>'
-
+				camlist = [pn for pn in self.percepts.keys() if self.percepts[pn].snapshot]
+				usage = 'usage: !snapshot <camname>'
+				if camlist :
+					usage += '. Cameras are: %s' % ', '.join(camlist)
+				msg = usage
 		if msg :
 			self.connection.privmsg(chan, msg)
 
