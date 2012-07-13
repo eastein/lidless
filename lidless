@@ -244,6 +244,7 @@ if __name__ == '__main__' :
 
 	t.start()
 	signal.signal(signal.SIGTERM, lambda a,b: t.stop())
+	signal.signal(signal.SIGINT, lambda a,b: t.stop())
 
 	while not t.done :
 		try :
