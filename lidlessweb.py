@@ -175,11 +175,15 @@ class BaseHandler(tornado.web.RequestHandler):
 class SnapshotHandler(tornado.web.RequestHandler):
 	def get(self, camname, tsus) :
 		try :
-			jpeg_str = self.application.__snapshots__[camname][long(tsus)]
+			if tsus == 'latest' :
+				k = max(self.application.__snapshots__[camname].keys())
+			else :
+				k = long(tsus)
+			jpeg_str = self.application.__snapshots__[camname][k]
 			self.set_status(200)
 			self.set_header('Content-Type', 'image/jpeg')
 			self.write(jpeg_str)
-		except KeyError :
+		except (ValueError, KeyError) :
 			self.set_status(404)
 			self.write('snapshot not found.')
 
@@ -504,7 +508,7 @@ class LidlessWeb(threading.Thread) :
 				(r"/api/([^/]+)/ticks$", TicksHandler),
 				(r"/api/([^/]+)/history$", HistoryHandler),
 				(r"/api/([^/]+)/history/([0-9]+)$", HistoryHandler),
-				(r"/api/([^/]+)/snapshot/([0-9]+).jpg$", SnapshotHandler),
+				(r"/api/([^/]+)/snapshot/(latest|[0-9]+).jpg$", SnapshotHandler),
 				(r"(/.*)$", NotFoundHandler),
 			]
 		else :
