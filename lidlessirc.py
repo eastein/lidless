@@ -53,7 +53,7 @@ class LidlessBot(mediorc.IRC) :
 				tsus = long(time.time() * 1000000)
 				if pname not in self.percepts :
 					msg = 'no such camera.'
-				elif not self.percepts[pname].snapshot :
+				elif not self.percepts[pname].snapshot : # FIXME verify that skipping this check still makes it not work later on, just fail in a different way. ZMQ access shouldn't be a way to bypass the rules.
 					msg = 'that camera does not allow snapshots'
 				else :
 					try :
