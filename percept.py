@@ -427,14 +427,12 @@ class Percept(threading.Thread) :
 							busyf = 0
 							good_frame = False
 
+						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
+
 						if self.idx and good_frame : # store turned on, so we have an IDX object to do it with
 							if busyf >= self.store_thr :
 								# TODO switch to millis?
 								self.idx.add_file(long(ts), self.jpeg_str, self.busy_percentage, busy_bitfield)
-
-						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
-
-						# TODOH record the jpeg str here if we have a frameidx object 
 						
 						if zmq_socket is not None :
 							msg = {
