@@ -11,6 +11,8 @@ import json
 import Queue
 import StringIO
 import base64
+import bitarray
+import frameidx
 
 SOCKET_RETRY_SEC = 10
 NO_FRAME_THR = 10
@@ -21,7 +23,7 @@ FPS = 1
 BUSY_THR = FPS * BUSY_SEC
 
 class Percept(threading.Thread) :
-	def __init__(self, camname, description, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG, snapshot=False, role=None) :
+	def __init__(self, camname, description, url, auth=None, zm_auth_hash_secret=None, zmq_url=None, mode=zmstream.Mode.MJPEG, snapshot=False, role=None, store=False, store_thr=1) :
 		self.camname = camname
 		self.description = description
 		self.url = url
@@ -36,6 +38,8 @@ class Percept(threading.Thread) :
 		self.luminance = None
 		self.alerts = []
 		self.snapshot = snapshot
+		self.store = store
+		self.store_thr = store_thr
 		self.role = role
 		threading.Thread.__init__(self)
 
@@ -181,15 +185,28 @@ class Percept(threading.Thread) :
 		else :
 			width, height = self.get_wh(motionframe)
 
+		# FIXME XXX this will get all kinds of weird results if bins_total isn't easily modulus-able by 8. Check that somehow.
+		bins_total = width * height
+		busy_bitfield = bitarray.bitarray(bins_total)
+		busyf = 0
+
+		i = 0
 		for x in range(width) :
 			for y in range(height) :
+				busy_bitfield[i] = False
+
 				if motionframe[x,y] > 0 :
+					busy_bitfield[i] = True
+					busyf += 1
+
 					history[x,y] = 0
 				else :
 					if history[x,y] != MAX :
 						history[x,y] += 1 # TODO #7 do not assume 1 second here... quite wrong
 
-		return history
+				i += 1
+
+		return busy_bitfield, busyf, history
 
 	def time_decay(self, history, by_seconds) :
 		# TODO convert to milliseconds, use more bit depth to achieve it
@@ -314,6 +331,8 @@ class Percept(threading.Thread) :
 		s.connect(self.zmq_url)
 		s.setsockopt (zmq.SUBSCRIBE, "")
 
+		self.idx = None
+
 		while self.ok :
 			r, w, x = zmq.core.poll.select([s], [], [], 0.1)
 			if r :
@@ -353,6 +372,11 @@ class Percept(threading.Thread) :
 		history = None
 		luminance_change = 0.0
 
+		if self.store :
+			self.idx = frameidx.IDX(self.camname)
+		else :
+			self.idx = None
+
 		while self.ok :
 			try :
 				self.connect()
@@ -384,22 +408,33 @@ class Percept(threading.Thread) :
 
 					motion_image = self.bins_to_img(diff)
 					if motion_image :
+						if self.snapshot or self.store :
+							img_sio = StringIO.StringIO()
+							i.save(img_sio, format='jpeg')
+							img_sio.seek(0)
+							self.jpeg_str = img_sio.read()
+
 						if luminance_change < 0.7 : # TODO use a constant
 							motion_buffer = self.determine_busyness(motion_image)
 							#cv.SaveImage('motion.png', motion_buffer)
 
 							# TODO #7; this function assumes a 1 second time interval which is not valid
-							history = self.record_frame(motion_buffer, history)
+							busy_bitfield, busyf, history = self.record_frame(motion_buffer, history)
+							good_frame = True
 						else :
 							#print 'skipping recording to history for %s, luminance_change = %0.3f' % (self.camname, luminance_change)
 							self.time_decay(history, 1) # TODO #7 use actual timing data here, not assume 1 second
+							busyf = 0
+							good_frame = False
+
+						if self.idx and good_frame : # store turned on, so we have an IDX object to do it with
+							if busyf >= self.store_thr :
+								# TODO switch to millis?
+								self.idx.add_file(long(ts), self.jpeg_str, self.busy_percentage, busy_bitfield)
 
 						self.ratio_busy = self.ratio_lte_thr(history, BUSY_THR)
-						if self.snapshot :
-							img_sio = StringIO.StringIO()
-							i.save(img_sio, format='jpeg')
-							img_sio.seek(0)
-							self.jpeg_str = img_sio.read()
+
+						# TODOH record the jpeg str here if we have a frameidx object 
 						
 						if zmq_socket is not None :
 							msg = {

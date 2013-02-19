@@ -16,7 +16,7 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 * python-irclib
 * tornado (http://www.tornadoweb.org/)
 
-Anything under https://github.com/eastein should be pulled/updated from github at the same time; from time to time, I change the way modules and their users work in fundamental ways.
+Anything under https://github.com/eastein should be pulled/updated from github at the same time; from time to time, I change the way modules and their users work in fundamental ways.  I should probably switch to submodules, admittedly.
 
 You'll want a ZoneMinder server for this to be useful for a wide variety of camera streams, or if you have a motion jpeg http streaming camera, you will probably be able to use it directly.
 

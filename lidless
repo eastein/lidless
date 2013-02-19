@@ -130,7 +130,19 @@ if __name__ == '__main__' :
 		if 'snapshot' in stanza :
 			snapshot = stanza['snapshot']
 
-		perc = percept.Percept(stanza['name'], description, stanza['url'], auth=auth, zm_auth_hash_secret=zm_ahs, zmq_url=zmq_url, mode=mode, snapshot=snapshot, role=stanza['role'])
+		perc = percept.Percept(
+			stanza['name'],
+			description,
+			stanza['url'],
+			auth=auth, 
+			zm_auth_hash_secret=zm_ahs,
+			zmq_url=zmq_url,
+			mode=mode,
+			snapshot=snapshot,
+			role=stanza['role'],
+			store=stanza.get('store', False),
+			store_thr=stanza.get('store_thr', 1)
+		)
 		t.add(perc)
 
 		perc.history = historical.History(perc.camname, perc)
