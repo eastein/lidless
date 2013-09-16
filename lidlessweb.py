@@ -310,6 +310,7 @@ class JSHandler(tornado.web.RequestHandler):
 class SpaceAPI(object) :
 	def __init__(self, metadata, cameras, needed_activity, status_note) :
 		self.metadata = metadata
+                self.metadata.setdefault('state', dict())
 		self.cameras = cameras
 		self.needed_activity = needed_activity
 		self.status_note = status_note
@@ -341,18 +342,18 @@ class SpaceAPIHandler(JSONHandler):
 		spaceapi = self.spaceapis[spaceapiname]
 
 		r = dict(spaceapi.metadata)
-		r['api'] = '0.11'
-		oldest_frametime, r['open'] = spaceapi.open
+		r['api'] = '0.13'
+		oldest_frametime, r['state']['open'] = spaceapi.open
 		if oldest_frametime is not None :
 			r['lastchange'] = oldest_frametime
 
-		if r['open'] :
-			r['status'] = "Webcams detect activity."
+		if r['state']['open'] :
+			r['state']['message'] = "Webcams detect activity."
 		else :
-			r['status'] = "Webcams don't show much activity."
+			r['state']['message'] = "Webcams don't show much activity."
 
 		if spaceapi.status_note :
-			r['status'] += " " + spaceapi.status_note
+			r['state']['message'] += " " + spaceapi.status_note
 
 		return r
 
