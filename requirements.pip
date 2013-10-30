@@ -1,6 +1,5 @@
 futures
 PIL
-pyzmq
 tornado
 bitarray==0.8.0
 pyzmq==2.2.0
