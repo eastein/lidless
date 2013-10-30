@@ -11,6 +11,9 @@ lidless is a program for monitoring motion-jpeg camera feeds and interfacing the
 * flot, as a git submodule.  To make this work, you must run 'git submodule init' / 'git submodule update'.
 * pyzmq (http://www.zeromq.org/bindings:python) if you use the `zmq_url` setting anywhere.
 * pyffmpeg (http://code.google.com/p/pyffmpeg/) if you use the `use_ffmpeg` setting anywhere.
+
+It's strongly advised to look up the best way to install OpenCV and numpy for your distribution. Their packaging is basically like a medieval dungeon where they don't even know which side of the place setting to put the lobster fork on. Shocking.
+
 * OpenCV with python support, 2.1 or 2.2 work.  2.3 may work, but has not been tested successfully.
 * CPython 2.6 or 2.7 (other pythons may work as well)
 * python-irclib
