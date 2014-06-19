@@ -11,6 +11,7 @@ class Pruner(object) :
 	def __init__(self, head_dir, keep=KEEP) :
 		self.head_dir = head_dir
 		self.keep = keep
+		print 'keep %d days' % self.keep
 
 	def prune(self) :
 		leaves = [os.path.join(self.head_dir, p) for p in os.listdir(self.head_dir)]
@@ -31,6 +32,11 @@ class Pruner(object) :
 
 if __name__ == '__main__' :
 	print time.ctime(), "starting"
-	p = Pruner(sys.argv[1])
+        keep = KEEP
+	try :
+		keep = int(sys.argv[2])
+	except :
+		pass
+	p = Pruner(sys.argv[1], keep=keep)
 	p.prune()
 	print time.ctime(), "ending"

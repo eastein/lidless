@@ -129,7 +129,10 @@ if __name__ == '__main__' :
 		snapshot = False
 		if 'snapshot' in stanza :
 			snapshot = stanza['snapshot']
-
+		snapshot_base_url = 'http://localhost:8000'
+		if 'snapshot_base_url' in stanza :
+			snapshot_base_url = stanza['snapshot_base_url']
+		
 		perc = percept.Percept(
 			stanza['name'],
 			description,
@@ -139,6 +142,7 @@ if __name__ == '__main__' :
 			zmq_url=zmq_url,
 			mode=mode,
 			snapshot=snapshot,
+			snapshot_base_url=snapshot_base_url,
 			role=stanza['role'],
 			store=stanza.get('store', False),
 			store_thr=stanza.get('store_thr', 1)

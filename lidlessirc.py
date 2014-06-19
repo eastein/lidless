@@ -65,7 +65,7 @@ class LidlessBot(mediorc.IRC) :
 							"tsus"    : tsus
 						})
 						# TODO configurable base URL
-						msg = 'sent request, should load at http://localhost:8000/api/%s/snapshot/%d.jpg' % (pname, tsus)
+						msg = 'sent request, should load at %s/api/%s/snapshot/%d.jpg' % (self.percepts[pname].snapshot_base_url, pname, tsus)
 					except KeyError :
 						msg = 'zmq_url is misconfigured for this camera, sorry.'
 			except IndexError :
