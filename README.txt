@@ -93,7 +93,14 @@ The snapshot feature's purpose is to allow IRC users to request snapshots of spe
 <user> !snapshot frontdoor
 <bot> snapshot taken of frontdoor http://example.com/api/frontdoor/snapshot/1341808842002134.jpg
 
-This URL is available for a short time.
+This URL is available for a short time (for now, until restart).
+
+This feature is in beta.
+
+The settings on a camera stanza to enable it are:
+
+* snapshot, boolean. Defaults to False. Set it to True to enable snapshots.
+* snapshot_base_url, string. Defaults to http://localhost:8000 - the URL users using IRC should use to reach the main web instance in lidless. No trailing slash.
 
 ### Implementation/Configuration
 

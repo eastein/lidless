@@ -101,27 +101,34 @@ The snapshot feature's purpose is to allow IRC users to request snapshots of spe
 <user> !snapshot frontdoor
 <bot> snapshot taken of frontdoor http://example.com/api/frontdoor/snapshot/1341808842002134.jpg
 
-This URL is available for a short time.
+This URL is available for a short time (for now, until restart).
 
-<A name="toc3-105" title="Implementation/Configuration" />
+This feature is in beta.
+
+The settings on a camera stanza to enable it are:
+
+* snapshot, boolean. Defaults to False. Set it to True to enable snapshots.
+* snapshot_base_url, string. Defaults to http://localhost:8000 - the URL users using IRC should use to reach the main web instance in lidless. No trailing slash.
+
+<A name="toc3-112" title="Implementation/Configuration" />
 ### Implementation/Configuration
 
 This feature was not originally intended to be available, so its implementation and configuration have a few more concerns than some of the other features.
 
-<A name="toc2-110" title="FFMPEG" />
+<A name="toc2-117" title="FFMPEG" />
 ## FFMPEG
 
 *WARNING: EXPERIMENTAL*
 
 If you have access to a stream that ffmpeg can open and does not require authentication you can add the setting `mode = ffmpeg` to a `camera` stanza.  Doing so will use pyffmpeg to input the stream.  This is experimental and does not work very well yet, if at all.  Use at your own risk (even more so than the rest of this application, which is also at your own risk of course).
 
-<A name="toc3-117" title="Caveats" />
+<A name="toc3-124" title="Caveats" />
 ### Caveats
 
 * pyffmpeg segfaults if you point it at a motion-jpeg stream that requires authentication, at the very least. I don't know what else it crashes on or the origin of this crash.
 * if your CPU can't keep up, non-key frames may end up skipped and cause the video picture to get corrupted; you have probably seen this running HD video on an old computer.  This is easy to discount when watching video with your eyes, but less easy for *lidless* to discard and account for.  There may be a way to work around this.  I expect that these scenarios will result in falsely high busyness information or potentially falsely low busyness information.
 
-<A name="toc2-123" title="Roles" />
+<A name="toc2-130" title="Roles" />
 ## Roles
 
 Different parts of the system can be run in separate processes to avoid contention and performance issues.  Roles are settings in a stanza that specify what role name a process must be running as in order to execute the work related to the stanza.
@@ -132,7 +139,7 @@ For a web instance not using proxying (see below), the work is doing read operat
 
 An IRC instance will consume all alerts produced in its role, as will an announced instance.  You must run IRC and announced in separate processes (and hence, roles).  If you want alerts to go to more to than one, set the role on the alert stanza to a list of roles containing the consumers of alerts that you are targetting.  This has the added bonus feature (it's not a bug, really!) that you can send alerts to a specific subset of alert transmitting mediums.
 
-<A name="toc2-134" title="Proxying" />
+<A name="toc2-141" title="Proxying" />
 ## Proxying
 
 If you are having web interface or API performance issues, it's suggested to add a second web stanza with the `proxy_endpoint` set to the base url of the other web stanza; in the above example such a `proxy_endpoint` setting would be `"http://localhost:8000"`.  A stanza that works for proxying is:
@@ -146,32 +153,32 @@ If you are having web interface or API performance issues, it's suggested to add
 
 This proxying web instance has some special settings in play.  It is using the webserver role, which means it will not run in the `default` process: you must run another process with a role argument of `webserver` in order to execute it, using the same configuration file as the other processes.  It depends on every other process/role that services `camera` stanzas to also include a non-proxied `web` instance to do the actual data access.  The usage of the `proxy_mode = auto` setting will direct the proxy to load balance non-camera-specific requests and direct the camera-specific requests to the other `web` instance running on the local machine that is in the same `role` as the `camera` that the request is in reference to.  However, `proxy_mode = auto` does not currently work except over localhost.  If your worker processes are on a different machine than the proxy process, you will need to use `proxy_endpoint = http://ip:port` instead, and `proxy_mode = auto` isn't smart enough to automatically proxy between mid-layer proxies, so at this time proxying is not a solution for multi-machine scalability.
 
-<A name="toc2-148" title="Interchange in a Multi-role System" />
+<A name="toc2-155" title="Interchange in a Multi-role System" />
 ## Interchange in a Multi-role System
 
 If not all of the stanzas have the same role, sometimes information is required in one stanza that is generated in a different stanza; for instance, current ratio information.  There are 3 ways that this information can be acquired: direct memory access (if the stanza needing the information is in the same python process), ZeroMQ PUB/SUB (this should work inter-machine), HTTP proxy.
 
-<A name="toc3-153" title="Direct Access" />
+<A name="toc3-160" title="Direct Access" />
 ### Direct Access
 
 This one is the simplest; if the stanza (either `irc` or `web` that's doing serving and has no proxy settings configured) is in the same role, it will just access the data from the `camera` via the Python object that represents the camera processing work.
 
-<A name="toc3-158" title="ZeroMQ PUB/SUB" />
+<A name="toc3-165" title="ZeroMQ PUB/SUB" />
 ### ZeroMQ PUB/SUB
 
 Setting the `zmq_url` parameter on a `camera` will set up a ZMQ PUB/SUB socket set internal to the camera that allows the inactive instances of the `camera` in the out-of-`role` processes to receive realtime updates on the current ratio.  This connects with the Direct Access system at that time such that other stanzas will just directly access the latest PUB/SUB interchanged ratio state.  For details of the messages sent over the `zmq_url`, see API.txt.
 
-<A name="toc3-163" title="HTTP Proxy" />
+<A name="toc3-170" title="HTTP Proxy" />
 ### HTTP Proxy
 
 Using either `proxy_endpoint = ` or `proxy_mode = auto`, one `web` stanza can directly request the ratio data for API serving from a different `web` stanza that uses one of the other 2 methods of access.
 
-<A name="toc1-168" title="API" />
+<A name="toc1-175" title="API" />
 # API
 
 See API document for details of the API.
 
-<A name="toc1-173" title="See Also" />
+<A name="toc1-180" title="See Also" />
 # See Also
 
 See CREDITS for props to people who helped out.
