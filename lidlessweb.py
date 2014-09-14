@@ -11,7 +11,7 @@ import tornado.httpclient
 import concurrent.futures as futures
 import ramirez.mcore.events
 import os.path
-import zmqsub
+from zmqfan import zmqsub
 
 CAM_MATCH = re.compile('^/api/([^/]+)(|/.*)$')
 DEFAULT_RANGE_MATCH = re.compile('^/api/[^/]+/(ticks|history)$')
@@ -491,7 +491,7 @@ class LidlessWeb(threading.Thread) :
 			return
 
 		if self.zmq_url :
-			self.zmq_socket = zmqsub.JSONZMQBindSub(self.zmq_url)
+			self.zmq_socket = zmqsub.BindSub(self.zmq_url)
 		
 		handler_set = [
 			(r"/$", InterfaceHandler),

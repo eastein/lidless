@@ -1,7 +1,7 @@
 import time
 import mediorc
 import Queue
-import zmqsub
+from zmqfan import zmqsub
 
 class LidlessBot(mediorc.IRC) :
 	def __init__(self, server, nick, chan, percepts, alerts, endpoint) :
@@ -14,7 +14,7 @@ class LidlessBot(mediorc.IRC) :
 	def route_web_zmq(self, camname) :
 		if camname not in self.web_zmqs :
 			zmqurl = self.endpoint.zmqendpoint(camname)
-			self.web_zmqs[camname] = zmqsub.JSONZMQConnectPub(zmqurl)
+			self.web_zmqs[camname] = zmqsub.ConnectPub(zmqurl)
 		return self.web_zmqs[camname]
 	
 	def summarize_cameras(self, propname, noun) :
@@ -64,7 +64,6 @@ class LidlessBot(mediorc.IRC) :
 							"camname" : pname,
 							"tsus"    : tsus
 						})
-						# TODO configurable base URL
 						msg = 'sent request, should load at %s/api/%s/snapshot/%d.jpg' % (self.percepts[pname].snapshot_base_url, pname, tsus)
 					except KeyError :
 						msg = 'zmq_url is misconfigured for this camera, sorry.'
