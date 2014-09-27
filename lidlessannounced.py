@@ -1,12 +1,12 @@
 import Queue
 import time
 import threading
-import zmqsub
+from zmqfan import zmqsub
 
 class LidlessAnnouncer(threading.Thread) :
 	def __init__(self, alerts, zmq_url) :
 		self.alerts = alerts
-		self.zmqpub = zmqsub.JSONZMQConnectPub(zmq_url)
+		self.zmqpub = zmqsub.ConnectPub(zmq_url)
 		self.ok = True
 		threading.Thread.__init__(self)
 	

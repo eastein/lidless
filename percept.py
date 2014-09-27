@@ -326,20 +326,18 @@ class Percept(threading.Thread) :
 			time.sleep(0.01)
 
 	def run_zmq(self) :
-		import zmq
-		c = zmq.Context(1)
-		s = c.socket(zmq.SUB)
-		s.connect(self.zmq_url)
-		s.setsockopt (zmq.SUBSCRIBE, "")
-
+		from zmqfan import zmqsub
+		s = zmqsub.ConnectSub(self.zmq_url)
 		self.idx = None
 
 		while self.ok :
-			r, w, x = zmq.core.poll.select([s], [], [], 0.1)
-			if r :
-				msg = s.recv()
-				msg = json.loads(msg)
+			msg = None
+			try :
+				msg = s.recv(timeout=0.1)
+			except zmqsub.NoMessagesException :
+				pass
 
+			if msg is not None :
 				if msg['mtype'] != "percept_update" :
 					continue
 
@@ -361,10 +359,8 @@ class Percept(threading.Thread) :
 		zmq_socket = None
 		if self.zmq_url is not None :
 			if self.active :
-				import zmq
-				c = zmq.Context(1)
-				zmq_socket = c.socket(zmq.PUB)
-				zmq_socket.bind(self.zmq_url)
+				from zmqfan import zmqsub
+				zmq_socket = zmqsub.BindPub(self.zmq_url)
 			else :
 				self.run_zmq()
 				return
@@ -447,7 +443,7 @@ class Percept(threading.Thread) :
 							if self.snapshot :
 								msg['base64_jpeg'] = base64.encodestring(self.jpeg_str)
 							
-							zmq_socket.send(json.dumps(msg))
+							zmq_socket.send(msg)
 
 						print '%s frame processed, ratio busy %0.3f, lumr %1.3f lum %3.1f' % (self.camname.ljust(20), self.ratio_busy, luminance_change, luminance)
 						self.ratio_reaction()

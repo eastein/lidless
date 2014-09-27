@@ -3,4 +3,4 @@ futures
 PIL
 tornado
 bitarray==0.8.0
-pyzmq==2.2.0
+git+https://github.com/eastein/zmqfan.git@develop-0.6#egg=zmqfan
