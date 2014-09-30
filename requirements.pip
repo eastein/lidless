@@ -2,4 +2,5 @@ futures
 PIL
 tornado
 bitarray==0.8.0
+python-memcached
 git+https://github.com/eastein/zmqfan.git@develop-0.6#egg=zmqfan
